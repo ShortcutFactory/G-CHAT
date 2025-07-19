@@ -148,6 +148,8 @@
             border-radius: 22px;
             line-height: 1.6;
             animation: slideInUpFade 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1;
+            /* This will prevent individual words from breaking */
+            word-wrap: break-word;
         }
         
         .bot-message {
@@ -162,6 +164,11 @@
             color: var(--text-light);
             border-bottom-right-radius: 6px;
             align-self: flex-end;
+        }
+
+        /* The paragraph inside the message will handle the text layout */
+        .message p {
+            white-space: pre-wrap; /* This allows for correct line breaks and spacing */
         }
 
         .bot-message p span {
@@ -278,9 +285,7 @@
                 mainContent.classList.add('visible');
                 setTimeout(() => animationContainer.style.display = 'none', 1000);
                  setTimeout(() => {
-                    typeOutMessage(`They want you to be a pawn. I program kings.
-
-Your move.`, 'bot');
+                    typeOutMessage(`They want you to be a pawn. I program kings.\n\nYour move.`, 'bot');
                 }, 800);
             }, 1500);
 
@@ -302,7 +307,10 @@ Your move.`, 'bot');
             const addMessage = (text, sender) => {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', `${sender}-message`);
-                messageElement.innerHTML = `<p>${text}</p>`;
+                // To properly render newlines, we wrap the text in a <p> and set its white-space property
+                const p = document.createElement('p');
+                p.textContent = text;
+                messageElement.appendChild(p);
                 chatBox.appendChild(messageElement);
                 chatBox.scrollTop = chatBox.scrollHeight;
             };
@@ -312,7 +320,7 @@ Your move.`, 'bot');
                 sendBtn.disabled = disabled;
             };
 
-            const typeOutMessage = (text, sender) => {
+             const typeOutMessage = (fullText, sender) => {
                 toggleFormState(true);
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', `${sender}-message`);
@@ -320,30 +328,36 @@ Your move.`, 'bot');
                 messageElement.appendChild(p);
                 chatBox.appendChild(messageElement);
                 chatBox.scrollTop = chatBox.scrollHeight;
-
-                const words = text.split(' ');
+            
+                // This regex splits the text by spaces and newlines, but keeps the newlines
+                const wordsAndNewlines = fullText.split(/(\s+)/);
                 let i = 0;
-                const interval = setInterval(() => {
-                    if (i < words.length) {
-                        const wordSpan = document.createElement('span');
-                        wordSpan.textContent = words[i];
-                        wordSpan.style.animationDelay = `${i * 0.05}s`;
-                        
-                        p.appendChild(wordSpan);
-                        // FIX: Add the space as a text node *after* the span
-                        p.appendChild(document.createTextNode(' '));
 
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                        i++;
-                    } else {
+                const interval = setInterval(() => {
+                    if (i >= wordsAndNewlines.length) {
                         clearInterval(interval);
-                        if (navigator.vibrate) {
-                            navigator.vibrate(100);
-                        }
+                        if (navigator.vibrate) navigator.vibrate(100);
                         toggleFormState(false);
                         userInput.focus();
+                        return;
                     }
-                }, 80); // Speed of word appearance
+
+                    const part = wordsAndNewlines[i];
+                    
+                    // If the part is just whitespace (a space or newline), add it as a text node
+                    if (part.trim() === '' || part.includes('\n')) {
+                        p.appendChild(document.createTextNode(part));
+                    } else {
+                        // Otherwise, it's a word, so wrap it in a span for animation
+                        const wordSpan = document.createElement('span');
+                        wordSpan.textContent = part;
+                        wordSpan.style.animationDelay = `${i * 0.02}s`;
+                        p.appendChild(wordSpan);
+                    }
+                    
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    i++;
+                }, 50); // Speed of word/part appearance
             };
             
             const getBotResponse = () => {
