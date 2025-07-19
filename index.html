@@ -143,6 +143,7 @@
         .chat-box::-webkit-scrollbar-thumb:hover { background: #555; }
 
         .message {
+            /* This is the key property. It sets a MAXIMUM width, but allows the element to be smaller. */
             max-width: 80%;
             padding: 14px 20px;
             border-radius: 22px;
@@ -155,6 +156,7 @@
             background: var(--gradient);
             color: white;
             border-bottom-left-radius: 6px;
+            /* This aligns the bubble to the left of the container. */
             align-self: flex-start;
         }
 
@@ -162,6 +164,7 @@
             background: var(--user-msg-bg);
             color: var(--text-light);
             border-bottom-right-radius: 6px;
+            /* This aligns the bubble to the right of the container. */
             align-self: flex-end;
         }
 
@@ -255,19 +258,20 @@
         /* Responsive adjustments for mobile devices */
         @media (max-width: 768px) {
             .message {
-                max-width: 98%; /* Bubbles can use more width on smaller screens */
+                /* On mobile, we increase the max-width, but it still shrinks to fit content. */
+                max-width: 98%;
             }
 
             .chat-box {
-                padding: 15px; /* Slightly reduce padding to give content more space */
+                padding: 15px;
             }
 
             #main-content {
-                padding: 0; /* Remove padding for the main content on mobile */
+                padding: 0;
             }
 
             .chat-container {
-                border-radius: 0; /* Full-screen feel on mobile */
+                border-radius: 0;
                 border: none;
             }
         }
@@ -315,6 +319,7 @@
             const sampleResponses = [
                 "The world responds to action, not desire. Formulate a plan, then execute with unwavering focus. What is your first step?",
                 "Wealth is a byproduct of providing value at scale. Identify a problem you can solve better than anyone else. That is your goldmine.",
+                "Your move.", // Short response for testing
                 "True influence is not about being the loudest voice in the room, but the most respected. Listen more than you speak. Your words will gain weight.",
                 "Reframe 'failure'. It is not an outcome, but data. Analyze it, learn from it, and apply the lesson. Now, you are stronger.",
                 "Your reality is a reflection of your standards. Raise your standards. The universe will have no choice but to comply. What standard will you raise today?",
