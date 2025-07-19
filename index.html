@@ -148,7 +148,6 @@
             border-radius: 22px;
             line-height: 1.6;
             animation: slideInUpFade 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1;
-            /* This will prevent individual words from breaking */
             word-wrap: break-word;
         }
         
@@ -166,9 +165,8 @@
             align-self: flex-end;
         }
 
-        /* The paragraph inside the message will handle the text layout */
         .message p {
-            white-space: pre-wrap; /* This allows for correct line breaks and spacing */
+            white-space: pre-wrap;
         }
 
         .bot-message p span {
@@ -253,6 +251,26 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Responsive adjustments for mobile devices */
+        @media (max-width: 768px) {
+            .message {
+                max-width: 98%; /* Bubbles can use more width on smaller screens */
+            }
+
+            .chat-box {
+                padding: 15px; /* Slightly reduce padding to give content more space */
+            }
+
+            #main-content {
+                padding: 0; /* Remove padding for the main content on mobile */
+            }
+
+            .chat-container {
+                border-radius: 0; /* Full-screen feel on mobile */
+                border: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -307,7 +325,6 @@
             const addMessage = (text, sender) => {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', `${sender}-message`);
-                // To properly render newlines, we wrap the text in a <p> and set its white-space property
                 const p = document.createElement('p');
                 p.textContent = text;
                 messageElement.appendChild(p);
@@ -329,7 +346,6 @@
                 chatBox.appendChild(messageElement);
                 chatBox.scrollTop = chatBox.scrollHeight;
             
-                // This regex splits the text by spaces and newlines, but keeps the newlines
                 const wordsAndNewlines = fullText.split(/(\s+)/);
                 let i = 0;
 
@@ -344,11 +360,9 @@
 
                     const part = wordsAndNewlines[i];
                     
-                    // If the part is just whitespace (a space or newline), add it as a text node
                     if (part.trim() === '' || part.includes('\n')) {
                         p.appendChild(document.createTextNode(part));
                     } else {
-                        // Otherwise, it's a word, so wrap it in a span for animation
                         const wordSpan = document.createElement('span');
                         wordSpan.textContent = part;
                         wordSpan.style.animationDelay = `${i * 0.02}s`;
@@ -357,7 +371,7 @@
                     
                     chatBox.scrollTop = chatBox.scrollHeight;
                     i++;
-                }, 50); // Speed of word/part appearance
+                }, 50);
             };
             
             const getBotResponse = () => {
