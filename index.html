@@ -136,7 +136,7 @@
             transition: opacity 0.4s ease-out;
         }
         .bot-message.visible {
-            opacity: 1;
+             opacity: 1;
         }
         .bot-message-content {
             padding: 14px 20px;
@@ -166,7 +166,6 @@
             padding-left: 20px;
         }
 
-        /* --- FINAL, FLAWLESS ANIMATION --- */
         .char {
             display: inline;
             opacity: 0;
@@ -211,18 +210,18 @@
         .typing-indicator {
             display: flex; align-items: center; gap: 5px;
         }
+        /* FIXED: Dots now fade instead of bounce */
+        @keyframes fade {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
         .typing-indicator span {
             width: 8px; height: 8px;
             background-color: currentColor; border-radius: 50%;
-            animation: bounce 1.2s infinite ease-in-out;
+            animation: fade 1.5s infinite ease-in-out;
         }
-        .typing-indicator span:nth-child(2) { animation-delay: -0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: -0.4s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1.0); }
-        }
+        .typing-indicator span:nth-child(2) { animation-delay: -1s; }
+        .typing-indicator span:nth-child(3) { animation-delay: -0.5s; }
         
         .chat-form {
             display: flex; padding: 15px;
@@ -257,7 +256,12 @@
         #send-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 8px 25px -5px rgba(0, 229, 255, 0.6); }
         #send-btn:active:not(:disabled) { transform: scale(0.95); transition-duration: 0.1s; }
         #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        #send-btn svg { width: 24px; height: 24px; transform: translateX(1px); }
+        /* FIXED: Rotated airplane icon to point up */
+        #send-btn svg {
+            width: 24px;
+            height: 24px;
+            transform: rotate(-90deg) translateY(1px);
+        }
 
         @keyframes slideInUpFade {
             from { opacity: 0; transform: translateY(20px); }
@@ -358,7 +362,6 @@
                 }
             };
             
-            // --- The Definitive Live DOM Renderer ---
             const addBotMessage = (markdownText) => {
                 toggleFormState(true);
                 const rawHtml = marked.parse(markdownText);
@@ -372,26 +375,34 @@
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = rawHtml;
 
-                const actions = [];
-                function buildActionList(node) {
-                    if (node.nodeType === 1) { // Element node
-                        actions.push({ type: 'open', tag: node.nodeName });
-                        Array.from(node.childNodes).forEach(buildActionList);
-                        actions.push({ type: 'close', tag: node.nodeName });
-                    } else if (node.nodeType === 3) { // Text node
-                        actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
+                const characters = [];
+                function wrapCharacters(node) {
+                    if (node.nodeType === 3) {
+                        const fragment = document.createDocumentFragment();
+                        for (const char of node.textContent) {
+                            const span = document.createElement('span');
+                            span.className = 'char';
+                            span.textContent = char;
+                            fragment.appendChild(span);
+                            characters.push(span);
+                        }
+                        node.replaceWith(fragment);
+                    } else if (node.nodeType === 1) {
+                        Array.from(node.childNodes).forEach(wrapCharacters);
                     }
                 }
-                Array.from(tempDiv.childNodes).forEach(buildActionList);
-                
+
+                contentWrapper.innerHTML = rawHtml;
+                wrapCharacters(contentWrapper);
                 chatBox.appendChild(messageElement);
                 
-                let charCount = 0;
-                let currentParent = contentWrapper;
-                let parentStack = [contentWrapper];
-
+                requestAnimationFrame(() => {
+                     messageElement.classList.add('visible');
+                });
+                
+                let i = 0;
                 const rendererInterval = setInterval(() => {
-                    if (actions.length === 0) {
+                    if (i >= characters.length) {
                         clearInterval(rendererInterval);
                         messageElement.querySelectorAll('pre').forEach(pre => {
                             const code = pre.querySelector('code');
@@ -412,35 +423,12 @@
                         toggleFormState(false);
                         return;
                     }
-                    
-                    if(charCount === 0) {
-                        messageElement.classList.add('visible');
-                    }
 
-                    const action = actions.shift();
-
-                    if (action.type === 'open') {
-                        const newElement = document.createElement(action.tag);
-                        currentParent.appendChild(newElement);
-                        parentStack.push(newElement);
-                        currentParent = newElement;
-                    } else if (action.type === 'close') {
-                        parentStack.pop();
-                        currentParent = parentStack[parentStack.length - 1];
-                    } else if (action.type === 'char') {
-                        const span = document.createElement('span');
-                        span.className = 'char';
-                        span.textContent = action.content;
-                        currentParent.appendChild(span);
-                        // Add class in next frame to ensure transition triggers
-                        requestAnimationFrame(() => {
-                            span.classList.add('visible');
-                        });
-                        charCount++;
-                    }
-
+                    characters[i].classList.add('visible');
                     chatBox.scrollTop = chatBox.scrollHeight;
-                }, 20); // Adjust speed here (ms)
+                    i++;
+                }, 12); // FIXED: Animation speed increased
+
             };
 
             async function getBotResponse(userText) {
