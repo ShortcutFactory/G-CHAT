@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-AI</title>
-    <!-- NEW: CDN for the Marked.js library to parse Markdown -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>G-AI 👑</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Poppins:wght@400;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code&display=swap');
-
 
         :root {
+            /* UPDATED GRADIENT: Changed the cyan to a deeper blue for better contrast */
             --accent-cyan: #00B4DB; 
             --accent-purple: #8e2de2;
             --spotlight-color: rgba(142, 45, 226, 0.5);
@@ -22,7 +19,6 @@
             --border-color: rgba(51, 51, 51, 0.5);
             --user-msg-bg: #2c2c2e;
             --gradient: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
-            --code-bg: #1e1e1e;
         }
 
         *, *::before, *::after {
@@ -44,21 +40,27 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        body::before, body::after {
+        body::before {
             content: '';
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: -2;
-        }
-        body::before {
             background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--spotlight-color), transparent 30%);
+            z-index: -2;
+            pointer-events: none;
+            will-change: background;
         }
         body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
             background-size: 1px 3px;
+            z-index: -1;
+            pointer-events: none;
             animation: scanline 10s linear infinite;
+            will-change: transform;
         }
         
         @keyframes scanline {
@@ -97,17 +99,21 @@
         #main-content.visible { opacity: 1; }
         
         .chat-container {
-            width: 100%; height: 100%; max-width: 800px;
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
             background: var(--surface-alpha);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid var(--border-color);
             border-radius: 20px;
-            display: flex; flex-direction: column;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
+        /* UPDATED HEADER: Now picks up the new gradient automatically */
         .chat-header {
             font-family: 'Orbitron', sans-serif;
             font-size: clamp(1.5rem, 4vw, 2rem);
@@ -124,9 +130,12 @@
         }
         
         .chat-box {
-            flex-grow: 1; padding: 20px;
-            overflow-y: auto; display: flex;
-            flex-direction: column; gap: 15px;
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             scroll-behavior: smooth;
         }
         
@@ -136,86 +145,49 @@
         .chat-box::-webkit-scrollbar-thumb:hover { background: #555; }
 
         .message {
-            max-width: 95%;
-            padding: 0; /* Padding is now on the inner content */
+            max-width: 80%;
+            padding: 14px 20px;
             border-radius: 22px;
             line-height: 1.6;
             animation: slideInUpFade 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1;
             word-wrap: break-word;
         }
         
-        .message-content {
-            padding: 14px 20px;
-        }
-        
         .bot-message {
-            background: var(--gradient); color: white;
+            background: var(--gradient);
+            color: white;
             border-bottom-left-radius: 6px;
             align-self: flex-start;
         }
 
         .user-message {
-            background: var(--user-msg-bg); color: var(--text-light);
+            background: var(--user-msg-bg);
+            color: var(--text-light);
             border-bottom-right-radius: 6px;
             align-self: flex-end;
         }
-        
-        /* NEW: Markdown element styling */
-        .message-content > *:first-child { margin-top: 0; }
-        .message-content > *:last-child { margin-bottom: 0; }
-        .message-content h1, .message-content h2, .message-content h3 { margin: 0.8em 0 0.5em; }
-        .message-content p { margin: 0.5em 0; }
-        .message-content ul, .message-content ol { padding-left: 25px; margin: 0.5em 0; }
-        .message-content strong { font-weight: 700; }
-        .message-content pre {
-            position: relative;
-            background-color: var(--code-bg);
-            border-radius: 8px;
-            padding: 16px;
-            margin: 1em 0;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.9rem;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            overflow-x: auto;
-        }
-        .message-content code {
-            font-family: 'Fira Code', monospace;
-            background: rgba(0,0,0,0.2);
-            padding: 2px 4px;
-            border-radius: 4px;
-        }
-        .message-content pre code {
-            background: transparent;
-            padding: 0;
-            border-radius: 0;
-        }
 
-        /* NEW: Copy button styling */
-        .copy-btn {
-            position: absolute;
-            top: 8px; right: 8px;
-            background: #333;
-            color: var(--text-light);
-            border: none;
-            padding: 6px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.8rem;
+        .message p { white-space: pre-wrap; }
+        .bot-message p span {
+            display: inline-block;
+            animation: word-appear 0.4s ease-out forwards;
             opacity: 0;
-            transition: opacity 0.2s, background-color 0.2s;
         }
-        pre:hover .copy-btn { opacity: 1; }
-        .copy-btn:hover { background-color: #444; }
-        .copy-btn.copied { background-color: var(--accent-purple); }
 
+        @keyframes word-appear {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* NEW: Styles for the "G-AI is thinking..." indicator */
         .typing-indicator {
-            display: flex; align-items: center; gap: 5px;
-            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         .typing-indicator span {
-            width: 8px; height: 8px;
+            width: 8px;
+            height: 8px;
             background-color: currentColor;
             border-radius: 50%;
             animation: bounce 1.2s infinite ease-in-out;
@@ -227,19 +199,26 @@
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1.0); }
         }
-        
+
         .chat-form {
-            display: flex; padding: 15px;
+            display: flex;
+            padding: 15px;
             border-top: 1px solid var(--border-color);
-            gap: 10px; z-index: 2; flex-shrink: 0;
+            gap: 10px;
+            z-index: 2;
+            flex-shrink: 0;
             background-color: rgba(26, 26, 28, 0.5);
         }
 
         #user-input {
-            flex-grow: 1; border: 1px solid transparent;
-            background: var(--background); padding: 14px 20px;
-            font-size: 1rem; color: var(--text-light);
-            outline: none; border-radius: 30px;
+            flex-grow: 1;
+            border: 1px solid transparent;
+            background: var(--background);
+            padding: 14px 20px;
+            font-size: 1rem;
+            color: var(--text-light);
+            outline: none;
+            border-radius: 30px;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         #user-input:focus {
@@ -250,15 +229,28 @@
         #user-input:disabled { opacity: 0.5; }
 
         #send-btn {
-            background: var(--gradient); border: none; color: white;
-            width: 52px; height: 52px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; flex-shrink: 0;
+            background: var(--gradient);
+            border: none;
+            color: white;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
             box-shadow: 0 5px 20px -5px rgba(142, 45, 226, 0.5);
         }
-        #send-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 8px 25px -5px rgba(0, 229, 255, 0.6); }
-        #send-btn:active:not(:disabled) { transform: scale(0.95); transition-duration: 0.1s; }
+        #send-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px -5px rgba(0, 229, 255, 0.6);
+        }
+        #send-btn:active:not(:disabled) {
+            transform: scale(0.95);
+            transition-duration: 0.1s;
+        }
         #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         #send-btn svg { width: 24px; height: 24px; transform: translateX(1px); }
 
@@ -301,16 +293,13 @@
         });
 
         async function initializeChat() {
-            // --- Config ---
-            const API_KEY = "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc";
+            const API_KEY = "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc"; 
             const MODEL_NAME = "gemini-2.5-flash";
             const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
             
-            // --- State ---
             let conversationHistory = [];
             let typingIndicatorRef = null;
 
-            // --- DOM Elements ---
             const animationContainer = document.getElementById('logo-animation-container');
             const mainContent = document.getElementById('main-content');
             const chatForm = document.getElementById('chat-form');
@@ -318,61 +307,25 @@
             const sendBtn = document.getElementById('send-btn');
             const chatBox = document.getElementById('chat-box');
 
-            // --- Initialization ---
             try {
                 const response = await fetch('prompt.txt');
                 if (!response.ok) throw new Error(`Failed to load prompt.txt: ${response.status}`);
                 const systemPromptText = await response.text();
-                conversationHistory.push({ role: "system", parts: [{ text: systemPromptText }] });
+                conversationHistory.push({ role: "model", parts: [{ text: systemPromptText }] });
             } catch (error) {
                 console.error("Fatal Error:", error);
-                addMessage("Error: Could not load G-AI's core programming. Check console.", 'bot', true);
+                addMessage("Error: Could not load G-AI's core programming. Check console.", 'bot');
                 return;
             }
 
-            // --- Core Functions ---
-            const addMessage = (text, sender, isMarkdown = false) => {
+            const addMessage = (text, sender) => {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', `${sender}-message`);
-
-                const contentDiv = document.createElement('div');
-                contentDiv.classList.add('message-content');
-                
-                if (isMarkdown) {
-                    contentDiv.innerHTML = marked.parse(text);
-                } else {
-                    contentDiv.textContent = text;
-                }
-
-                messageElement.appendChild(contentDiv);
+                const p = document.createElement('p');
+                p.textContent = text;
+                messageElement.appendChild(p);
                 chatBox.appendChild(messageElement);
                 chatBox.scrollTop = chatBox.scrollHeight;
-                
-                if (sender === 'bot') {
-                    addCopyButtons(messageElement);
-                }
-            };
-            
-            const addCopyButtons = (messageEl) => {
-                const codeBlocks = messageEl.querySelectorAll('pre');
-                codeBlocks.forEach(block => {
-                    const button = document.createElement('button');
-                    button.className = 'copy-btn';
-                    button.textContent = 'Copy';
-                    block.appendChild(button);
-
-                    button.addEventListener('click', () => {
-                        const code = block.querySelector('code').innerText;
-                        navigator.clipboard.writeText(code).then(() => {
-                            button.textContent = 'Copied!';
-                            button.classList.add('copied');
-                            setTimeout(() => {
-                                button.textContent = 'Copy';
-                                button.classList.remove('copied');
-                            }, 2000);
-                        });
-                    });
-                });
             };
 
             const toggleFormState = (disabled) => {
@@ -380,6 +333,7 @@
                 sendBtn.disabled = disabled;
             };
             
+            // NEW: Functions to show/hide the typing indicator
             const showTypingIndicator = () => {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', 'bot-message');
@@ -399,28 +353,39 @@
                 }
             };
             
-            // UPDATED: Adaptive typing animation
-            const animateBotMessage = (fullText) => {
-                hideTypingIndicator();
+            // UPDATED: Faster typing animation
+            const typeOutMessage = (fullText, sender) => {
                 toggleFormState(true);
-
                 const messageElement = document.createElement('div');
-                messageElement.classList.add('message', 'bot-message');
-                const contentDiv = document.createElement('div');
-                contentDiv.classList.add('message-content');
-                
-                // Parse markdown and add content
-                contentDiv.innerHTML = marked.parse(fullText);
-                messageElement.appendChild(contentDiv);
+                messageElement.classList.add('message', `${sender}-message`);
+                const p = document.createElement('p');
+                messageElement.appendChild(p);
                 chatBox.appendChild(messageElement);
-                addCopyButtons(messageElement);
-                
                 chatBox.scrollTop = chatBox.scrollHeight;
+            
+                const wordsAndNewlines = fullText.split(/(\s+)/);
+                let i = 0;
 
-                // Simple reveal, no character-by-character animation. This is faster and works better with complex HTML.
-                // The main "slideInUpFade" CSS animation provides the entrance effect.
-                toggleFormState(false);
-                userInput.focus();
+                const interval = setInterval(() => {
+                    if (i >= wordsAndNewlines.length) {
+                        clearInterval(interval);
+                        if (navigator.vibrate) navigator.vibrate(50);
+                        toggleFormState(false);
+                        userInput.focus();
+                        return;
+                    }
+                    const part = wordsAndNewlines[i];
+                    if (part.trim() === '' || part.includes('\n')) {
+                        p.appendChild(document.createTextNode(part));
+                    } else {
+                        const wordSpan = document.createElement('span');
+                        wordSpan.textContent = part;
+                        wordSpan.style.animationDelay = `${i * 0.015}s`; // Matched speed
+                        p.appendChild(wordSpan);
+                    }
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    i++;
+                }, 35); // Faster interval
             };
 
             async function getBotResponse(userText) {
@@ -429,16 +394,15 @@
                     const response = await fetch(API_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: conversationHistory, systemInstruction: conversationHistory[0] })
+                        body: JSON.stringify({ contents: conversationHistory })
                     });
-                    if (!response.ok) throw new Error(`API returned status ${response.status}`);
-                    const data = await response.json();
-                    
-                    // Handle cases where content might be blocked
-                    if (!data.candidates || data.candidates[0].finishReason === "SAFETY") {
-                         return "My programming prevents me from answering that. Focus on the mission.";
+                    if (!response.ok) {
+                        throw new Error(`API returned status ${response.status}`);
                     }
-                    
+                    const data = await response.json();
+                    if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+                        throw new Error("Invalid response structure from API.");
+                    }
                     const botResponse = data.candidates[0].content.parts[0].text;
                     conversationHistory.push({ role: "model", parts: [{ text: botResponse }] });
                     return botResponse;
@@ -449,7 +413,6 @@
                 }
             }
 
-            // --- Event Handlers & Initial Load ---
             chatForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const userText = userInput.value.trim();
@@ -458,11 +421,12 @@
                     userInput.value = '';
                     toggleFormState(true);
                     
-                    showTypingIndicator();
+                    showTypingIndicator(); // Show indicator immediately
 
                     const botText = await getBotResponse(userText);
-                    
-                    animateBotMessage(botText);
+
+                    hideTypingIndicator(); // Hide indicator before typing
+                    typeOutMessage(botText, 'bot');
                 }
             });
 
@@ -478,7 +442,7 @@
                 setTimeout(() => {
                     const initialMessage = `They want you to be a pawn. I program kings.\n\nYour move.`;
                     conversationHistory.push({ role: "model", parts: [{ text: initialMessage }] });
-                    animateBotMessage(initialMessage);
+                    typeOutMessage(initialMessage, 'bot');
                 }, 800);
             }, 1500);
         }
