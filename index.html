@@ -132,7 +132,7 @@
             border-radius: 22px;
             border-bottom-left-radius: 6px;
             padding: 0;
-            opacity: 0; /* Start invisible, JS makes it appear */
+            opacity: 0;
             transform: translateY(10px);
             transition: opacity 0.4s ease-out, transform 0.4s ease-out;
         }
@@ -155,7 +155,6 @@
         }
         .user-message p { margin: 0; }
         
-        /* --- FIXED: Definitive Spacing Rules --- */
         .bot-message-content > :first-child { margin-top: 0; }
         .bot-message-content > :last-child { margin-bottom: 0; }
         .bot-message-content p,
@@ -163,23 +162,34 @@
         .bot-message-content ol,
         .bot-message-content pre {
             margin-top: 0;
-            margin-bottom: 1em; /* Universal vertical rhythm */
+            margin-bottom: 1em;
         }
         .bot-message-content ul,
         .bot-message-content ol {
-            padding-left: 20px; /* Standardized list indent */
+            padding-left: 20px;
         }
-        /* --- End of Fix --- */
-
+        
+        /* --- REFRESHED: New Text Reveal Animation --- */
+        @keyframes text-reveal {
+            from {
+                opacity: 0;
+                filter: blur(4px);
+                transform: scale(1.2);
+            }
+            to {
+                opacity: 1;
+                filter: blur(0);
+                transform: scale(1);
+            }
+        }
+        
         .char {
-            display: inline;
-            animation: unblurFadeInUp 0.5s ease-out forwards;
+            display: inline-block; /* Changed to inline-block for transform */
+            white-space: pre-wrap; /* Preserves spaces */
+            opacity: 0; /* Start invisible */
+            animation: text-reveal 0.4s ease-out forwards;
         }
-
-        @keyframes unblurFadeInUp {
-            from { opacity: 0; filter: blur(5px); transform: translateY(8px); }
-            to { opacity: 1; filter: blur(0); transform: translateY(0); }
-        }
+        /* --- End of Refresh --- */
 
         .message pre {
             background-color: var(--code-bg);
@@ -376,11 +386,11 @@
 
                 const actions = [];
                 function buildActionList(node) {
-                    if (node.nodeType === 1) { // Element node
+                    if (node.nodeType === 1) {
                         actions.push({ type: 'open', tag: node.nodeName });
                         Array.from(node.childNodes).forEach(buildActionList);
                         actions.push({ type: 'close', tag: node.nodeName });
-                    } else if (node.nodeType === 3) { // Text node
+                    } else if (node.nodeType === 3) {
                         actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
                     }
                 }
@@ -433,7 +443,8 @@
                         const span = document.createElement('span');
                         span.className = 'char';
                         span.textContent = action.content;
-                        span.style.animationDelay = `${charCount * 0.01}s`;
+                        // Stagger the animation
+                        span.style.animationDelay = `${charCount * 0.015}s`;
                         currentParent.appendChild(span);
                         charCount++;
                     }
