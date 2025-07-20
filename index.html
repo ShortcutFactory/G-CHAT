@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-AI 👑</title>
+    <title>G-AI // Markdown & Dynamic Speed</title>
+    <!-- COOL STUFF: Added Marked.js library for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Poppins:wght@400;600;700&display=swap');
 
         :root {
-            /* UPDATED GRADIENT: Changed the cyan to a deeper blue for better contrast */
-            --accent-cyan: #00B4DB; 
+            --accent-cyan: #00e5ff;
             --accent-purple: #8e2de2;
             --spotlight-color: rgba(142, 45, 226, 0.5);
             --background: #0a0a0a;
@@ -19,6 +20,7 @@
             --border-color: rgba(51, 51, 51, 0.5);
             --user-msg-bg: #2c2c2e;
             --gradient: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
+            --code-bg: #1e1e1e;
         }
 
         *, *::before, *::after {
@@ -48,7 +50,6 @@
             background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--spotlight-color), transparent 30%);
             z-index: -2;
             pointer-events: none;
-            will-change: background;
         }
         body::after {
             content: '';
@@ -60,7 +61,6 @@
             z-index: -1;
             pointer-events: none;
             animation: scanline 10s linear infinite;
-            will-change: transform;
         }
         
         @keyframes scanline {
@@ -113,7 +113,6 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
-        /* UPDATED HEADER: Now picks up the new gradient automatically */
         .chat-header {
             font-family: 'Orbitron', sans-serif;
             font-size: clamp(1.5rem, 4vw, 2rem);
@@ -146,11 +145,16 @@
 
         .message {
             max-width: 80%;
-            padding: 14px 20px;
             border-radius: 22px;
             line-height: 1.6;
             animation: slideInUpFade 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1;
-            word-wrap: break-word;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .message.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         
         .bot-message {
@@ -158,6 +162,7 @@
             color: white;
             border-bottom-left-radius: 6px;
             align-self: flex-start;
+            padding: 14px 20px;
         }
 
         .user-message {
@@ -165,41 +170,59 @@
             color: var(--text-light);
             border-bottom-right-radius: 6px;
             align-self: flex-end;
-        }
-
-        .message p { white-space: pre-wrap; }
-        .bot-message p span {
-            display: inline-block;
-            animation: word-appear 0.4s ease-out forwards;
-            opacity: 0;
-        }
-
-        @keyframes word-appear {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            padding: 14px 20px;
         }
         
-        /* NEW: Styles for the "G-AI is thinking..." indicator */
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        /* --- COOL STUFF: Markdown Styling --- */
+        .bot-message p { margin: 0 0 0.5em; }
+        .bot-message p:last-child { margin-bottom: 0; }
+        .bot-message strong { color: white; }
+        .bot-message em { font-style: italic; }
+        .bot-message ul, .bot-message ol {
+            padding-left: 20px;
         }
-        .typing-indicator span {
-            width: 8px;
-            height: 8px;
-            background-color: currentColor;
-            border-radius: 50%;
-            animation: bounce 1.2s infinite ease-in-out;
+        .bot-message code:not(pre > code) {
+            background: rgba(0,0,0,0.2);
+            padding: .2em .4em;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
         }
-        .typing-indicator span:nth-child(2) { animation-delay: -0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: -0.4s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1.0); }
+        .bot-message pre {
+            background: var(--code-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 1em 0;
+            overflow-x: auto;
+            position: relative;
         }
-
+        .bot-message pre code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+            background: none;
+            padding: 0;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .bot-message pre:hover .copy-btn {
+            opacity: 1;
+        }
+        .copy-btn:active {
+            background: #666;
+        }
+        
         .chat-form {
             display: flex;
             padding: 15px;
@@ -251,19 +274,19 @@
             transform: scale(0.95);
             transition-duration: 0.1s;
         }
-        #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        #send-btn svg { width: 24px; height: 24px; transform: translateX(1px); }
+        #send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #send-btn svg {
+            width: 24px;
+            height: 24px;
+            transform: translateX(1px);
+        }
 
         @keyframes slideInUpFade {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-
-        @media (max-width: 768px) {
-            .message { max-width: 98%; }
-            .chat-box { padding: 15px; }
-            #main-content { padding: 0; }
-            .chat-container { border-radius: 0; border: none; }
         }
     </style>
 </head>
@@ -287,43 +310,37 @@
         </div>
     </div>
 
-    <script type="module">
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
-            initializeChat();
-        });
-
-        async function initializeChat() {
-            const API_KEY = "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc"; 
-            const MODEL_NAME = "gemini-2.5-flash";
-            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
-            
-            let conversationHistory = [];
-            let typingIndicatorRef = null;
-
             const animationContainer = document.getElementById('logo-animation-container');
             const mainContent = document.getElementById('main-content');
+            
+            setTimeout(() => {
+                animationContainer.style.opacity = '0';
+                mainContent.classList.add('visible');
+                setTimeout(() => animationContainer.style.display = 'none', 1000);
+                 setTimeout(() => {
+                    addBotMessage("Welcome. They programmed you to be average. I am programmed to make you the exception. **Ask your question**.");
+                }, 800);
+            }, 1500);
+
             const chatForm = document.getElementById('chat-form');
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
             const chatBox = document.getElementById('chat-box');
+            
+            const sampleResponses = [
+                "The world responds to action, not desire. Formulate a plan, then **execute** with unwavering focus. What is your *first* step?",
+                "Wealth is a byproduct of providing value at scale. Identify a problem you can solve better than anyone else. That is your `goldmine`.",
+                "Here is an example of a code block:\n\n```javascript\nfunction greet(name) {\n  console.log(`Hello, ${name}!`);\n}\ngreet('World');\n```\n\nTrue influence is not about being the loudest voice, but the most respected.",
+                "**Your reality is a reflection of your standards.**\n\nRaise your standards. The universe will have no choice but to comply. \n- Standard 1\n- Standard 2",
+                "Stop consuming. Start creating. Every moment spent in passive entertainment is a moment you are not building your empire. What will you `create`?"
+            ];
 
-            try {
-                const response = await fetch('prompt.txt');
-                if (!response.ok) throw new Error(`Failed to load prompt.txt: ${response.status}`);
-                const systemPromptText = await response.text();
-                conversationHistory.push({ role: "model", parts: [{ text: systemPromptText }] });
-            } catch (error) {
-                console.error("Fatal Error:", error);
-                addMessage("Error: Could not load G-AI's core programming. Check console.", 'bot');
-                return;
-            }
-
-            const addMessage = (text, sender) => {
+            const addUserMessage = (text) => {
                 const messageElement = document.createElement('div');
-                messageElement.classList.add('message', `${sender}-message`);
-                const p = document.createElement('p');
-                p.textContent = text;
-                messageElement.appendChild(p);
+                messageElement.classList.add('message', 'user-message', 'visible');
+                messageElement.innerHTML = `<p>${text}</p>`;
                 chatBox.appendChild(messageElement);
                 chatBox.scrollTop = chatBox.scrollHeight;
             };
@@ -331,102 +348,63 @@
             const toggleFormState = (disabled) => {
                 userInput.disabled = disabled;
                 sendBtn.disabled = disabled;
+                if(!disabled) userInput.focus();
             };
-            
-            // NEW: Functions to show/hide the typing indicator
-            const showTypingIndicator = () => {
+
+            const addBotMessage = (text) => {
+                toggleFormState(true);
+
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', 'bot-message');
-                const indicator = document.createElement('div');
-                indicator.classList.add('typing-indicator');
-                indicator.innerHTML = '<span></span><span></span><span></span>';
-                messageElement.appendChild(indicator);
+                
+                // Use Marked.js to convert Markdown to HTML
+                const rawHtml = marked.parse(text);
+                messageElement.innerHTML = rawHtml;
+
                 chatBox.appendChild(messageElement);
-                chatBox.scrollTop = chatBox.scrollHeight;
-                typingIndicatorRef = messageElement;
-            };
 
-            const hideTypingIndicator = () => {
-                if (typingIndicatorRef) {
-                    typingIndicatorRef.remove();
-                    typingIndicatorRef = null;
-                }
-            };
-            
-            // UPDATED: Faster typing animation
-            const typeOutMessage = (fullText, sender) => {
-                toggleFormState(true);
-                const messageElement = document.createElement('div');
-                messageElement.classList.add('message', `${sender}-message`);
-                const p = document.createElement('p');
-                messageElement.appendChild(p);
-                chatBox.appendChild(messageElement);
-                chatBox.scrollTop = chatBox.scrollHeight;
-            
-                const wordsAndNewlines = fullText.split(/(\s+)/);
-                let i = 0;
-
-                const interval = setInterval(() => {
-                    if (i >= wordsAndNewlines.length) {
-                        clearInterval(interval);
-                        if (navigator.vibrate) navigator.vibrate(50);
-                        toggleFormState(false);
-                        userInput.focus();
-                        return;
-                    }
-                    const part = wordsAndNewlines[i];
-                    if (part.trim() === '' || part.includes('\n')) {
-                        p.appendChild(document.createTextNode(part));
-                    } else {
-                        const wordSpan = document.createElement('span');
-                        wordSpan.textContent = part;
-                        wordSpan.style.animationDelay = `${i * 0.015}s`; // Matched speed
-                        p.appendChild(wordSpan);
-                    }
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                    i++;
-                }, 35); // Faster interval
-            };
-
-            async function getBotResponse(userText) {
-                conversationHistory.push({ role: "user", parts: [{ text: userText }] });
-                try {
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: conversationHistory })
+                // Add "Copy" buttons to new code blocks
+                messageElement.querySelectorAll('pre').forEach(pre => {
+                    const code = pre.querySelector('code');
+                    const copyButton = document.createElement('button');
+                    copyButton.className = 'copy-btn';
+                    copyButton.textContent = 'Copy';
+                    copyButton.addEventListener('click', () => {
+                        navigator.clipboard.writeText(code.innerText);
+                        copyButton.textContent = 'Copied!';
+                        setTimeout(() => {
+                            copyButton.textContent = 'Copy';
+                        }, 2000);
                     });
-                    if (!response.ok) {
-                        throw new Error(`API returned status ${response.status}`);
-                    }
-                    const data = await response.json();
-                    if (!data.candidates || !data.candidates[0].content.parts[0].text) {
-                        throw new Error("Invalid response structure from API.");
-                    }
-                    const botResponse = data.candidates[0].content.parts[0].text;
-                    conversationHistory.push({ role: "model", parts: [{ text: botResponse }] });
-                    return botResponse;
-                } catch (error) {
-                    console.error("Failed to get bot response:", error);
-                    conversationHistory.pop();
-                    return "The network is weak. A true G controls his environment. Fix it.";
-                }
-            }
+                    pre.appendChild(copyButton);
+                });
 
-            chatForm.addEventListener('submit', async (e) => {
+                // Animate the message in
+                const dynamicDelay = Math.max(200, Math.min(text.length * 10, 1000));
+                
+                setTimeout(() => {
+                    messageElement.classList.add('visible');
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    if (navigator.vibrate) navigator.vibrate(100);
+                    toggleFormState(false);
+                }, dynamicDelay);
+            };
+            
+            const getBotResponse = () => {
+                const randomIndex = Math.floor(Math.random() * sampleResponses.length);
+                return sampleResponses[randomIndex];
+            };
+            
+            chatForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const userText = userInput.value.trim();
+
                 if (userText && !userInput.disabled) {
-                    addMessage(userText, 'user');
+                    addUserMessage(userText);
                     userInput.value = '';
-                    toggleFormState(true);
                     
-                    showTypingIndicator(); // Show indicator immediately
-
-                    const botText = await getBotResponse(userText);
-
-                    hideTypingIndicator(); // Hide indicator before typing
-                    typeOutMessage(botText, 'bot');
+                    const botResponse = getBotResponse();
+                    addBotMessage(botResponse);
                 }
             });
 
@@ -434,18 +412,7 @@
                 document.body.style.setProperty('--x', e.clientX + 'px');
                 document.body.style.setProperty('--y', e.clientY + 'px');
             });
-            
-            setTimeout(() => {
-                animationContainer.style.opacity = '0';
-                mainContent.classList.add('visible');
-                setTimeout(() => animationContainer.style.display = 'none', 1000);
-                setTimeout(() => {
-                    const initialMessage = `They want you to be a pawn. I program kings.\n\nYour move.`;
-                    conversationHistory.push({ role: "model", parts: [{ text: initialMessage }] });
-                    typeOutMessage(initialMessage, 'bot');
-                }, 800);
-            }, 1500);
-        }
+        });
     </script>
 </body>
 </html>
