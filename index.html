@@ -136,7 +136,7 @@
             transition: opacity 0.4s ease-out;
         }
         .bot-message.visible {
-             opacity: 1;
+            opacity: 1;
         }
         .bot-message-content {
             padding: 14px 20px;
@@ -169,14 +169,11 @@
         /* --- FINAL, FLAWLESS ANIMATION --- */
         .char {
             display: inline;
-            /* Start state */
             opacity: 0;
             filter: blur(4px);
-            /* Smooth transition for the change */
-            transition: opacity 0.4s ease-out, filter 0.6s ease-out;
+            transition: opacity 0.4s ease-out, filter 0.4s ease-out;
         }
         .char.visible {
-            /* End state */
             opacity: 1;
             filter: blur(0);
         }
@@ -375,38 +372,26 @@
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = rawHtml;
 
-                const characters = [];
-                function wrapCharacters(node) {
-                    if (node.nodeType === 3) { // Text node
-                        const fragment = document.createDocumentFragment();
-                        for (const char of node.textContent) {
-                            const span = document.createElement('span');
-                            span.className = 'char';
-                            span.textContent = char;
-                            fragment.appendChild(span);
-                            characters.push(span);
-                        }
-                        node.replaceWith(fragment);
-                    } else if (node.nodeType === 1) { // Element node
-                        Array.from(node.childNodes).forEach(wrapCharacters);
+                const actions = [];
+                function buildActionList(node) {
+                    if (node.nodeType === 1) { // Element node
+                        actions.push({ type: 'open', tag: node.nodeName });
+                        Array.from(node.childNodes).forEach(buildActionList);
+                        actions.push({ type: 'close', tag: node.nodeName });
+                    } else if (node.nodeType === 3) { // Text node
+                        actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
                     }
                 }
-
-                // Add prepared HTML to the live DOM first
-                contentWrapper.innerHTML = rawHtml;
-                // THEN wrap characters
-                wrapCharacters(contentWrapper);
-
+                Array.from(tempDiv.childNodes).forEach(buildActionList);
+                
                 chatBox.appendChild(messageElement);
                 
-                // Make the message bubble appear
-                requestAnimationFrame(() => {
-                     messageElement.classList.add('visible');
-                });
-                
-                let i = 0;
+                let charCount = 0;
+                let currentParent = contentWrapper;
+                let parentStack = [contentWrapper];
+
                 const rendererInterval = setInterval(() => {
-                    if (i >= characters.length) {
+                    if (actions.length === 0) {
                         clearInterval(rendererInterval);
                         messageElement.querySelectorAll('pre').forEach(pre => {
                             const code = pre.querySelector('code');
@@ -427,11 +412,35 @@
                         toggleFormState(false);
                         return;
                     }
+                    
+                    if(charCount === 0) {
+                        messageElement.classList.add('visible');
+                    }
 
-                    characters[i].classList.add('visible');
+                    const action = actions.shift();
+
+                    if (action.type === 'open') {
+                        const newElement = document.createElement(action.tag);
+                        currentParent.appendChild(newElement);
+                        parentStack.push(newElement);
+                        currentParent = newElement;
+                    } else if (action.type === 'close') {
+                        parentStack.pop();
+                        currentParent = parentStack[parentStack.length - 1];
+                    } else if (action.type === 'char') {
+                        const span = document.createElement('span');
+                        span.className = 'char';
+                        span.textContent = action.content;
+                        currentParent.appendChild(span);
+                        // Add class in next frame to ensure transition triggers
+                        requestAnimationFrame(() => {
+                            span.classList.add('visible');
+                        });
+                        charCount++;
+                    }
+
                     chatBox.scrollTop = chatBox.scrollHeight;
-                    i++;
-                }, 15); // Adjust speed here (ms)
+                }, 20); // Adjust speed here (ms)
             };
 
             async function getBotResponse(userText) {
