@@ -143,7 +143,6 @@
         .chat-box::-webkit-scrollbar-thumb:hover { background: #555; }
 
         .message {
-            /* This is the key property. It sets a MAXIMUM width, but allows the element to be smaller. */
             max-width: 80%;
             padding: 14px 20px;
             border-radius: 22px;
@@ -156,7 +155,6 @@
             background: var(--gradient);
             color: white;
             border-bottom-left-radius: 6px;
-            /* This aligns the bubble to the left of the container. */
             align-self: flex-start;
         }
 
@@ -164,7 +162,6 @@
             background: var(--user-msg-bg);
             color: var(--text-light);
             border-bottom-right-radius: 6px;
-            /* This aligns the bubble to the right of the container. */
             align-self: flex-end;
         }
 
@@ -179,14 +176,8 @@
         }
 
         @keyframes word-appear {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .chat-form {
@@ -255,25 +246,11 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Responsive adjustments for mobile devices */
         @media (max-width: 768px) {
-            .message {
-                /* On mobile, we increase the max-width, but it still shrinks to fit content. */
-                max-width: 98%;
-            }
-
-            .chat-box {
-                padding: 15px;
-            }
-
-            #main-content {
-                padding: 0;
-            }
-
-            .chat-container {
-                border-radius: 0;
-                border: none;
-            }
+            .message { max-width: 98%; }
+            .chat-box { padding: 15px; }
+            #main-content { padding: 0; }
+            .chat-container { border-radius: 0; border: none; }
         }
     </style>
 </head>
@@ -297,36 +274,51 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
+            // Call the main async function to start the chat
+            initializeChat();
+        });
+
+        // This is our main async function to set up the chat
+        async function initializeChat() {
+            // --- Gemini API Configuration ---
+            const API_KEY = "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc"; // IMPORTANT: Keep this secure!
+            const MODEL_NAME = "gemini-2.5-flash";
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
+            
+            let conversationHistory = [];
+
+            // --- Fetch the System Prompt ---
+            try {
+                const response = await fetch('prompt.txt');
+                if (!response.ok) {
+                    throw new Error(`Failed to load prompt.txt: ${response.status} ${response.statusText}`);
+                }
+                const systemPromptText = await response.text();
+                
+                const systemInstruction = {
+                    role: "model", // System instructions are best set with the 'model' role
+                    parts: [{ text: systemPromptText }]
+                };
+                conversationHistory.push(systemInstruction);
+
+            } catch (error) {
+                console.error("Fatal Error: Could not initialize chatbot.", error);
+                // Display an error in the chatbox if the prompt fails to load
+                addMessage("Error: Could not load G-AI's core programming. Check the console.", 'bot');
+                return; // Stop execution if the prompt fails
+            }
+
+            // --- DOM Elements ---
             const animationContainer = document.getElementById('logo-animation-container');
             const mainContent = document.getElementById('main-content');
-            
-            setTimeout(() => {
-                animationContainer.style.opacity = '0';
-                mainContent.classList.add('visible');
-                setTimeout(() => animationContainer.style.display = 'none', 1000);
-                 setTimeout(() => {
-                    typeOutMessage(`They want you to be a pawn. I program kings.\n\nYour move.`, 'bot');
-                }, 800);
-            }, 1500);
-
             const chatForm = document.getElementById('chat-form');
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
             const chatBox = document.getElementById('chat-box');
-            
-            const sampleResponses = [
-                "The world responds to action, not desire. Formulate a plan, then execute with unwavering focus. What is your first step?",
-                "Wealth is a byproduct of providing value at scale. Identify a problem you can solve better than anyone else. That is your goldmine.",
-                "Your move.", // Short response for testing
-                "True influence is not about being the loudest voice in the room, but the most respected. Listen more than you speak. Your words will gain weight.",
-                "Reframe 'failure'. It is not an outcome, but data. Analyze it, learn from it, and apply the lesson. Now, you are stronger.",
-                "Your reality is a reflection of your standards. Raise your standards. The universe will have no choice but to comply. What standard will you raise today?",
-                "Stop consuming. Start creating. Every moment spent in passive entertainment is a moment you are not building your empire. What will you create?",
-                "Discipline is the bridge between goals and accomplishment. It's built daily, in small, non-negotiable actions. What is your non-negotiable action for today?"
-            ];
 
+            // --- UI Functions (These are defined globally inside the script tag, so they can be accessed) ---
             const addMessage = (text, sender) => {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', `${sender}-message`);
@@ -342,7 +334,7 @@
                 sendBtn.disabled = disabled;
             };
 
-             const typeOutMessage = (fullText, sender) => {
+            const typeOutMessage = (fullText, sender) => {
                 toggleFormState(true);
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', `${sender}-message`);
@@ -362,9 +354,7 @@
                         userInput.focus();
                         return;
                     }
-
                     const part = wordsAndNewlines[i];
-                    
                     if (part.trim() === '' || part.includes('\n')) {
                         p.appendChild(document.createTextNode(part));
                     } else {
@@ -373,29 +363,57 @@
                         wordSpan.style.animationDelay = `${i * 0.02}s`;
                         p.appendChild(wordSpan);
                     }
-                    
                     chatBox.scrollTop = chatBox.scrollHeight;
                     i++;
                 }, 50);
             };
-            
-            const getBotResponse = () => {
-                const randomIndex = Math.floor(Math.random() * sampleResponses.length);
-                return sampleResponses[randomIndex];
-            };
-            
-            chatForm.addEventListener('submit', (e) => {
+
+            // --- API Logic ---
+            async function getBotResponse(userText) {
+                conversationHistory.push({
+                    role: "user",
+                    parts: [{ text: userText }]
+                });
+
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: conversationHistory })
+                    });
+
+                    if (!response.ok) {
+                        const errorBody = await response.json();
+                        console.error("API Error:", errorBody);
+                        throw new Error(`API returned status ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+                        throw new Error("Invalid response structure from API.");
+                    }
+                    
+                    const botResponse = data.candidates[0].content.parts[0].text;
+                    conversationHistory.push({ role: "model", parts: [{ text: botResponse }] });
+                    return botResponse;
+
+                } catch (error) {
+                    console.error("Failed to get bot response:", error);
+                    conversationHistory.pop();
+                    return "The network is weak. A true G controls his environment. Fix it.";
+                }
+            }
+
+            // --- Event Listeners & Final Initialization ---
+            chatForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const userText = userInput.value.trim();
-
                 if (userText && !userInput.disabled) {
                     addMessage(userText, 'user');
                     userInput.value = '';
-                    
-                    setTimeout(() => {
-                        const botText = getBotResponse();
-                        typeOutMessage(botText, 'bot');
-                    }, 800 + Math.random() * 400);
+                    toggleFormState(true);
+                    const botText = await getBotResponse(userText);
+                    typeOutMessage(botText, 'bot');
                 }
             });
 
@@ -403,7 +421,19 @@
                 document.body.style.setProperty('--x', e.clientX + 'px');
                 document.body.style.setProperty('--y', e.clientY + 'px');
             });
-        });
+            
+            // Initial load animation and first message
+            setTimeout(() => {
+                animationContainer.style.opacity = '0';
+                mainContent.classList.add('visible');
+                setTimeout(() => animationContainer.style.display = 'none', 1000);
+                setTimeout(() => {
+                    const initialMessage = `They want you to be a pawn. I program kings.\n\nYour move.`;
+                    conversationHistory.push({ role: "model", parts: [{ text: initialMessage }] });
+                    typeOutMessage(initialMessage, 'bot');
+                }, 800);
+            }, 1500);
+        }
     </script>
 </body>
 </html>
