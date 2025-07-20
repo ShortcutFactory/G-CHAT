@@ -131,15 +131,16 @@
             align-self: flex-start;
             border-radius: 22px;
             border-bottom-left-radius: 6px;
-            padding: 14px 20px;
-            /* FIXED: Start invisible and transition opacity */
+            /* The bubble itself starts empty */
+            padding: 0;
             opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+            transition: opacity 0.4s ease-out;
         }
         .bot-message.visible {
-             opacity: 1;
-             transform: translateY(0);
+            opacity: 1;
+        }
+        .bot-message-content {
+            padding: 14px 20px;
         }
 
         .user-message {
@@ -152,21 +153,20 @@
         }
         .user-message p { margin: 0; }
         
-        .bot-message > :first-child { margin-top: 0; }
-        .bot-message > :last-child { margin-bottom: 0; }
-        .bot-message p,
-        .bot-message ul,
-        .bot-message ol,
-        .bot-message pre {
+        .bot-message-content > :first-child { margin-top: 0; }
+        .bot-message-content > :last-child { margin-bottom: 0; }
+        .bot-message-content p,
+        .bot-message-content ul,
+        .bot-message-content ol,
+        .bot-message-content pre {
             margin-top: 0;
             margin-bottom: 1em;
         }
-        .bot-message ul,
-        .bot-message ol {
+        .bot-message-content ul,
+        .bot-message-content ol {
             padding-left: 20px;
         }
 
-        /* --- FINAL, ELEGANT ANIMATION --- */
         @keyframes unblurFadeIn {
             from {
                 opacity: 0;
@@ -180,12 +180,7 @@
 
         .char {
             display: inline;
-            /* Start in the "from" state of the animation */
-            opacity: 0;
-            filter: blur(5px);
-        }
-        .char.visible {
-            animation: unblurFadeIn 0.8s ease-out forwards;
+            animation: unblurFadeIn 0.6s ease-out forwards;
         }
         
         .message pre {
@@ -368,77 +363,86 @@
                 }
             };
             
-            // --- The Definitive, Flicker-Free Renderer ---
+            // --- The Definitive Live DOM Renderer ---
             const addBotMessage = (markdownText) => {
                 toggleFormState(true);
                 const rawHtml = marked.parse(markdownText);
                 
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', 'bot-message');
-                messageElement.innerHTML = rawHtml;
+                const contentWrapper = document.createElement('div');
+                contentWrapper.classList.add('bot-message-content');
+                messageElement.appendChild(contentWrapper);
+                
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = rawHtml;
 
-                const codeBlocks = messageElement.querySelectorAll('pre');
-                codeBlocks.forEach(pre => {
-                    const code = pre.querySelector('code');
-                    const copyButton = document.createElement('button');
-                    copyButton.className = 'copy-btn'; copyButton.textContent = 'Copy';
-                    copyButton.onclick = () => {
-                        navigator.clipboard.writeText(code.textContent).then(() => {
-                            copyButton.textContent = 'Copied!';
-                            copyButton.classList.add('copied');
-                            setTimeout(() => {
-                                copyButton.textContent = 'Copy';
-                                copyButton.classList.remove('copied');
-                            }, 2000);
-                        });
-                    };
-                    pre.appendChild(copyButton);
-                });
-
-                const allTextNodes = [];
-                const walker = document.createTreeWalker(messageElement, NodeFilter.SHOW_TEXT, null, false);
-                let node;
-                while(node = walker.nextNode()) {
-                    allTextNodes.push(node);
-                }
-
-                const characters = [];
-                allTextNodes.forEach(node => {
-                    const text = node.textContent;
-                    const fragment = document.createDocumentFragment();
-                    for (let i = 0; i < text.length; i++) {
-                        const span = document.createElement('span');
-                        span.textContent = text[i];
-                        span.className = 'char';
-                        fragment.appendChild(span);
-                        characters.push(span);
+                const actions = [];
+                function buildActionList(node) {
+                    if (node.nodeType === 1) { // Element node
+                        actions.push({ type: 'open', tag: node.nodeName });
+                        Array.from(node.childNodes).forEach(buildActionList);
+                        actions.push({ type: 'close', tag: node.nodeName });
+                    } else if (node.nodeType === 3) { // Text node
+                        actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
                     }
-                    node.replaceWith(fragment);
-                });
-
-                // Add the fully-prepared, but still invisible, message to the DOM
+                }
+                Array.from(tempDiv.childNodes).forEach(buildActionList);
+                
                 chatBox.appendChild(messageElement);
                 
-                // Make the message bubble appear
-                // Use requestAnimationFrame to ensure the opacity=0 is applied before starting the transition
-                requestAnimationFrame(() => {
-                     messageElement.classList.add('visible');
-                });
-                
-                let i = 0;
+                let charCount = 0;
+                let currentParent = contentWrapper;
+                let parentStack = [contentWrapper];
+
                 const rendererInterval = setInterval(() => {
-                    if (i >= characters.length) {
+                    if (actions.length === 0) {
                         clearInterval(rendererInterval);
+                        messageElement.querySelectorAll('pre').forEach(pre => {
+                            const code = pre.querySelector('code');
+                            const copyButton = document.createElement('button');
+                            copyButton.className = 'copy-btn'; copyButton.textContent = 'Copy';
+                            copyButton.onclick = () => {
+                                navigator.clipboard.writeText(code.textContent).then(() => {
+                                    copyButton.textContent = 'Copied!';
+                                    copyButton.classList.add('copied');
+                                    setTimeout(() => {
+                                        copyButton.textContent = 'Copy';
+                                        copyButton.classList.remove('copied');
+                                    }, 2000);
+                                });
+                            };
+                            pre.appendChild(copyButton);
+                        });
                         toggleFormState(false);
                         return;
                     }
-                    characters[i].classList.add('visible');
-                    characters[i].style.animationDelay = `${i * 0.015}s`;
                     
-                    // Perfectly synchronized scroll
+                    if(charCount === 0) {
+                        messageElement.classList.add('visible');
+                    }
+
+                    const action = actions.shift();
+
+                    if (action.type === 'open') {
+                        const newElement = document.createElement(action.tag);
+                        currentParent.appendChild(newElement);
+                        parentStack.push(newElement);
+                        currentParent = newElement;
+                    } else if (action.type === 'close') {
+                        parentStack.pop();
+                        currentParent = parentStack[parentStack.length - 1];
+                    } else if (action.type === 'char') {
+                        const span = document.createElement('span');
+                        span.className = 'char';
+                        span.textContent = action.content;
+                        span.style.animationDelay = `${charCount * 0.015}s`;
+                        currentParent.appendChild(span);
+                        charCount++;
+                    }
+
                     chatBox.scrollTop = chatBox.scrollHeight;
-                    i++;
-                }, 15); // Adjust speed here (ms)
+                }, 15);
             };
 
             async function getBotResponse(userText) {
