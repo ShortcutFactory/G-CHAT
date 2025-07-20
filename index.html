@@ -131,16 +131,8 @@
             align-self: flex-start;
             border-radius: 22px;
             border-bottom-left-radius: 6px;
-            padding: 0;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+            padding: 0; /* Let the content define the padding */
         }
-        .bot-message.visible {
-             opacity: 1;
-             transform: translateY(0);
-        }
-
         .bot-message-content {
             padding: 14px 20px;
         }
@@ -168,26 +160,23 @@
         .bot-message-content ol {
             padding-left: 20px;
         }
-        
-        /* --- REFRESHED: New Text Reveal Animation --- */
-        @keyframes text-reveal {
+
+        /* --- NEW: Refreshed Animation --- */
+        @keyframes charReveal {
             from {
                 opacity: 0;
-                filter: blur(4px);
-                transform: scale(1.2);
+                transform: translateY(3px);
             }
             to {
                 opacity: 1;
-                filter: blur(0);
-                transform: scale(1);
+                transform: translateY(0);
             }
         }
-        
         .char {
-            display: inline-block; /* Changed to inline-block for transform */
-            white-space: pre-wrap; /* Preserves spaces */
-            opacity: 0; /* Start invisible */
-            animation: text-reveal 0.4s ease-out forwards;
+            display: inline-block; /* Changed to allow transform */
+            opacity: 0; /* Start hidden */
+            animation: charReveal 0.4s ease-out forwards;
+            white-space: pre-wrap; /* Preserve spaces */
         }
         /* --- End of Refresh --- */
 
@@ -397,10 +386,10 @@
                 Array.from(tempDiv.childNodes).forEach(buildActionList);
                 
                 chatBox.appendChild(messageElement);
-                
-                let charCount = 0;
+
                 let currentParent = contentWrapper;
                 let parentStack = [contentWrapper];
+                let charCount = 0;
 
                 const rendererInterval = setInterval(() => {
                     if (actions.length === 0) {
@@ -424,10 +413,6 @@
                         toggleFormState(false);
                         return;
                     }
-                    
-                    if(charCount === 0) {
-                        messageElement.classList.add('visible');
-                    }
 
                     const action = actions.shift();
 
@@ -443,14 +428,13 @@
                         const span = document.createElement('span');
                         span.className = 'char';
                         span.textContent = action.content;
-                        // Stagger the animation
-                        span.style.animationDelay = `${charCount * 0.015}s`;
+                        span.style.animationDelay = `${charCount * 0.015}s`; // Stagger animation
                         currentParent.appendChild(span);
                         charCount++;
                     }
 
                     chatBox.scrollTop = chatBox.scrollHeight;
-                }, 15);
+                }, 18); // Tuned for a smooth "typing" feel
             };
 
             async function getBotResponse(userText) {
