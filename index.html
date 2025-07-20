@@ -8,7 +8,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Poppins:wght@400;600;700&display=swap');
 
         :root {
-            --accent-cyan: #00e5ff;
+            /* UPDATED GRADIENT: Changed the cyan to a deeper blue for better contrast */
+            --accent-cyan: #00B4DB; 
             --accent-purple: #8e2de2;
             --spotlight-color: rgba(142, 45, 226, 0.5);
             --background: #0a0a0a;
@@ -112,6 +113,7 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
+        /* UPDATED HEADER: Now picks up the new gradient automatically */
         .chat-header {
             font-family: 'Orbitron', sans-serif;
             font-size: clamp(1.5rem, 4vw, 2rem);
@@ -165,10 +167,7 @@
             align-self: flex-end;
         }
 
-        .message p {
-            white-space: pre-wrap;
-        }
-
+        .message p { white-space: pre-wrap; }
         .bot-message p span {
             display: inline-block;
             animation: word-appear 0.4s ease-out forwards;
@@ -180,6 +179,27 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
+        /* NEW: Styles for the "G-AI is thinking..." indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background-color: currentColor;
+            border-radius: 50%;
+            animation: bounce 1.2s infinite ease-in-out;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: -0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
         .chat-form {
             display: flex;
             padding: 15px;
@@ -231,15 +251,8 @@
             transform: scale(0.95);
             transition-duration: 0.1s;
         }
-        #send-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        #send-btn svg {
-            width: 24px;
-            height: 24px;
-            transform: translateX(1px);
-        }
+        #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        #send-btn svg { width: 24px; height: 24px; transform: translateX(1px); }
 
         @keyframes slideInUpFade {
             from { opacity: 0; transform: translateY(20px); }
@@ -276,41 +289,17 @@
 
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
-            // Call the main async function to start the chat
             initializeChat();
         });
 
-        // This is our main async function to set up the chat
         async function initializeChat() {
-            // --- Gemini API Configuration ---
-            const API_KEY = "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc"; // IMPORTANT: Keep this secure!
+            const API_KEY = "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc"; 
             const MODEL_NAME = "gemini-2.5-flash";
             const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
             
             let conversationHistory = [];
+            let typingIndicatorRef = null;
 
-            // --- Fetch the System Prompt ---
-            try {
-                const response = await fetch('prompt.txt');
-                if (!response.ok) {
-                    throw new Error(`Failed to load prompt.txt: ${response.status} ${response.statusText}`);
-                }
-                const systemPromptText = await response.text();
-                
-                const systemInstruction = {
-                    role: "model", // System instructions are best set with the 'model' role
-                    parts: [{ text: systemPromptText }]
-                };
-                conversationHistory.push(systemInstruction);
-
-            } catch (error) {
-                console.error("Fatal Error: Could not initialize chatbot.", error);
-                // Display an error in the chatbox if the prompt fails to load
-                addMessage("Error: Could not load G-AI's core programming. Check the console.", 'bot');
-                return; // Stop execution if the prompt fails
-            }
-
-            // --- DOM Elements ---
             const animationContainer = document.getElementById('logo-animation-container');
             const mainContent = document.getElementById('main-content');
             const chatForm = document.getElementById('chat-form');
@@ -318,7 +307,17 @@
             const sendBtn = document.getElementById('send-btn');
             const chatBox = document.getElementById('chat-box');
 
-            // --- UI Functions (These are defined globally inside the script tag, so they can be accessed) ---
+            try {
+                const response = await fetch('prompt.txt');
+                if (!response.ok) throw new Error(`Failed to load prompt.txt: ${response.status}`);
+                const systemPromptText = await response.text();
+                conversationHistory.push({ role: "model", parts: [{ text: systemPromptText }] });
+            } catch (error) {
+                console.error("Fatal Error:", error);
+                addMessage("Error: Could not load G-AI's core programming. Check console.", 'bot');
+                return;
+            }
+
             const addMessage = (text, sender) => {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', `${sender}-message`);
@@ -333,7 +332,28 @@
                 userInput.disabled = disabled;
                 sendBtn.disabled = disabled;
             };
+            
+            // NEW: Functions to show/hide the typing indicator
+            const showTypingIndicator = () => {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', 'bot-message');
+                const indicator = document.createElement('div');
+                indicator.classList.add('typing-indicator');
+                indicator.innerHTML = '<span></span><span></span><span></span>';
+                messageElement.appendChild(indicator);
+                chatBox.appendChild(messageElement);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                typingIndicatorRef = messageElement;
+            };
 
+            const hideTypingIndicator = () => {
+                if (typingIndicatorRef) {
+                    typingIndicatorRef.remove();
+                    typingIndicatorRef = null;
+                }
+            };
+            
+            // UPDATED: Faster typing animation
             const typeOutMessage = (fullText, sender) => {
                 toggleFormState(true);
                 const messageElement = document.createElement('div');
@@ -349,7 +369,7 @@
                 const interval = setInterval(() => {
                     if (i >= wordsAndNewlines.length) {
                         clearInterval(interval);
-                        if (navigator.vibrate) navigator.vibrate(100);
+                        if (navigator.vibrate) navigator.vibrate(50);
                         toggleFormState(false);
                         userInput.focus();
                         return;
@@ -360,43 +380,32 @@
                     } else {
                         const wordSpan = document.createElement('span');
                         wordSpan.textContent = part;
-                        wordSpan.style.animationDelay = `${i * 0.02}s`;
+                        wordSpan.style.animationDelay = `${i * 0.015}s`; // Matched speed
                         p.appendChild(wordSpan);
                     }
                     chatBox.scrollTop = chatBox.scrollHeight;
                     i++;
-                }, 50);
+                }, 35); // Faster interval
             };
 
-            // --- API Logic ---
             async function getBotResponse(userText) {
-                conversationHistory.push({
-                    role: "user",
-                    parts: [{ text: userText }]
-                });
-
+                conversationHistory.push({ role: "user", parts: [{ text: userText }] });
                 try {
                     const response = await fetch(API_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ contents: conversationHistory })
                     });
-
                     if (!response.ok) {
-                        const errorBody = await response.json();
-                        console.error("API Error:", errorBody);
                         throw new Error(`API returned status ${response.status}`);
                     }
-
                     const data = await response.json();
                     if (!data.candidates || !data.candidates[0].content.parts[0].text) {
                         throw new Error("Invalid response structure from API.");
                     }
-                    
                     const botResponse = data.candidates[0].content.parts[0].text;
                     conversationHistory.push({ role: "model", parts: [{ text: botResponse }] });
                     return botResponse;
-
                 } catch (error) {
                     console.error("Failed to get bot response:", error);
                     conversationHistory.pop();
@@ -404,7 +413,6 @@
                 }
             }
 
-            // --- Event Listeners & Final Initialization ---
             chatForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const userText = userInput.value.trim();
@@ -412,7 +420,12 @@
                     addMessage(userText, 'user');
                     userInput.value = '';
                     toggleFormState(true);
+                    
+                    showTypingIndicator(); // Show indicator immediately
+
                     const botText = await getBotResponse(userText);
+
+                    hideTypingIndicator(); // Hide indicator before typing
                     typeOutMessage(botText, 'bot');
                 }
             });
@@ -422,7 +435,6 @@
                 document.body.style.setProperty('--y', e.clientY + 'px');
             });
             
-            // Initial load animation and first message
             setTimeout(() => {
                 animationContainer.style.opacity = '0';
                 mainContent.classList.add('visible');
