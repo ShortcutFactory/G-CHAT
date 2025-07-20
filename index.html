@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>G-AI 👑</title>
-    <!-- ADDED: Markdown parsing library -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Poppins:wght@400;600;700&display=swap');
@@ -167,12 +166,33 @@
             border-bottom-right-radius: 6px;
             align-self: flex-end;
         }
+        .user-message p { margin: 0; }
 
         .message p:not(:last-child) { margin-bottom: 1em; }
-        .message ul, .message ol { padding-left: 20px; }
+        .message ul, .message ol { padding-left: 20px; margin-top: 0.5em; margin-bottom: 0.5em; }
         .message strong { font-weight: 700; }
 
-        /* --- NEW: Code Block and Copy Button Styling --- */
+        /* --- NEW: High-Fidelity Text Animation --- */
+        @keyframes unblurFadeInUp {
+            from {
+                opacity: 0;
+                filter: blur(8px);
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                filter: blur(0);
+                transform: translateY(0);
+            }
+        }
+
+        .bot-message span.char-animated {
+            display: inline-block;
+            opacity: 0; /* Start hidden */
+            animation: unblurFadeInUp 0.6s ease-out forwards;
+        }
+        /* --- End of New Styles --- */
+
         .message pre {
             background-color: var(--code-bg);
             border: 1px solid var(--border-color);
@@ -183,7 +203,7 @@
             white-space: pre-wrap;
             word-wrap: break-word;
             overflow-x: auto;
-            position: relative; /* For positioning the copy button */
+            position: relative;
         }
 
         .message pre code {
@@ -210,11 +230,7 @@
             opacity: 1;
             background-color: #4a4a4c;
         }
-
-        .copy-btn.copied {
-            background-color: var(--accent-purple);
-        }
-        /* --- End of New Styles --- */
+        .copy-btn.copied { background-color: var(--accent-purple); }
 
         .typing-indicator {
             display: flex;
@@ -335,6 +351,7 @@
             
             let conversationHistory = [];
             let typingIndicatorRef = null;
+            let totalCharsAnimated = 0;
 
             const animationContainer = document.getElementById('logo-animation-container');
             const mainContent = document.getElementById('main-content');
@@ -357,7 +374,6 @@
             const addMessage = (text, sender) => {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', `${sender}-message`);
-                // For user messages, we don't parse markdown, just display plain text.
                 const p = document.createElement('p');
                 p.textContent = text;
                 messageElement.appendChild(p);
@@ -389,18 +405,15 @@
                 }
             };
             
-            // --- REBUILT: Function to handle bot messages, Markdown, code blocks, and fast typing ---
+            // --- REBUILT: Bot message handler with advanced animation ---
             const addBotMessage = (markdownText) => {
                 toggleFormState(true);
-
-                // Parse markdown to HTML
                 const rawHtml = marked.parse(markdownText);
                 
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', 'bot-message');
-                messageElement.innerHTML = rawHtml; // Use innerHTML to render markdown
+                messageElement.innerHTML = rawHtml;
                 
-                // --- Add Copy Buttons to Code Blocks ---
                 const codeBlocks = messageElement.querySelectorAll('pre');
                 codeBlocks.forEach(pre => {
                     const code = pre.querySelector('code');
@@ -420,20 +433,44 @@
                     pre.appendChild(copyButton);
                 });
 
-                // Prepare for character-by-character animation
-                messageElement.style.opacity = '0'; // Hide it initially
+                // --- NEW: Character-by-character animation logic ---
+                let charIndex = 0;
+                const textNodes = [];
+                // TreeWalker is a robust way to get all text nodes in the element
+                const walker = document.createTreeWalker(messageElement, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while(node = walker.nextNode()) {
+                    // Exclude text inside code blocks from animation
+                    if(!node.parentElement.closest('pre')) {
+                        textNodes.push(node);
+                    }
+                }
+
+                textNodes.forEach(node => {
+                    const text = node.textContent;
+                    const fragment = document.createDocumentFragment();
+                    for (let i = 0; i < text.length; i++) {
+                        const span = document.createElement('span');
+                        span.className = 'char-animated';
+                        span.textContent = text[i];
+                        // Stagger the animation start time
+                        span.style.animationDelay = `${charIndex * 0.015}s`;
+                        fragment.appendChild(span);
+                        charIndex++;
+                    }
+                    node.replaceWith(fragment);
+                });
+
                 chatBox.appendChild(messageElement);
-                
-                // Animate the message container fading in
-                messageElement.style.transition = 'opacity 0.5s ease';
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                // Re-enable form after the animation is complete
+                const totalAnimationTime = charIndex * 15 + 600; // Delay per char + animation duration
                 setTimeout(() => {
-                    messageElement.style.opacity = '1';
-                    chatBox.scrollTop = chatBox.scrollHeight;
                     toggleFormState(false);
                     userInput.focus();
-                }, 100); // Small delay to ensure it's in the DOM
+                }, totalAnimationTime);
             };
-
 
             async function getBotResponse(userText) {
                 conversationHistory.push({ role: "user", parts: [{ text: userText }] });
@@ -441,11 +478,7 @@
                     const response = await fetch(API_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: conversationHistory,
-                            // Optional: You can add safety settings if needed
-                            // safetySettings: [...] 
-                        })
+                        body: JSON.stringify({ contents: conversationHistory })
                     });
                     if (!response.ok) throw new Error(`API returned status ${response.status}`);
                     const data = await response.json();
@@ -472,9 +505,9 @@
                     showTypingIndicator();
 
                     const botText = await getBotResponse(userText);
-
+                    
                     hideTypingIndicator();
-                    addBotMessage(botText); // Use the new function for bot messages
+                    addBotMessage(botText);
                 }
             });
 
@@ -490,7 +523,6 @@
                 setTimeout(() => {
                     const initialMessage = `They want you to be a pawn. I program kings.\n\nYour move.`;
                     conversationHistory.push({ role: "model", parts: [{ text: initialMessage }] });
-                    // Use the new bot message handler for the intro message too
                     addBotMessage(initialMessage);
                 }, 800);
             }, 1500);
