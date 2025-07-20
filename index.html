@@ -49,7 +49,6 @@
             background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--spotlight-color), transparent 30%);
             z-index: -2;
             pointer-events: none;
-            will-change: background;
         }
         body::after {
             content: '';
@@ -61,7 +60,6 @@
             z-index: -1;
             pointer-events: none;
             animation: scanline 10s linear infinite;
-            will-change: transform;
         }
         
         @keyframes scanline {
@@ -172,7 +170,6 @@
         .message ul, .message ol { padding-left: 20px; margin-top: 0.5em; margin-bottom: 0.5em; }
         .message strong { font-weight: 700; }
 
-        /* --- NEW: High-Fidelity Text Animation --- */
         @keyframes unblurFadeInUp {
             from {
                 opacity: 0;
@@ -185,13 +182,14 @@
                 transform: translateY(0);
             }
         }
-
+        
+        /* UPDATED: Added white-space to preserve spaces */
         .bot-message span.char-animated {
             display: inline-block;
-            opacity: 0; /* Start hidden */
+            opacity: 0;
             animation: unblurFadeInUp 0.6s ease-out forwards;
+            white-space: pre-wrap; 
         }
-        /* --- End of New Styles --- */
 
         .message pre {
             background-color: var(--code-bg);
@@ -206,10 +204,7 @@
             position: relative;
         }
 
-        .message pre code {
-            font-family: inherit;
-            white-space: inherit;
-        }
+        .message pre code { font-family: inherit; white-space: inherit; }
 
         .copy-btn {
             position: absolute;
@@ -226,17 +221,10 @@
             transition: opacity 0.2s ease, background-color 0.2s ease;
         }
 
-        .copy-btn:hover {
-            opacity: 1;
-            background-color: #4a4a4c;
-        }
+        .copy-btn:hover { opacity: 1; background-color: #4a4a4c; }
         .copy-btn.copied { background-color: var(--accent-purple); }
 
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+        .typing-indicator { display: flex; align-items: center; gap: 5px; }
         .typing-indicator span {
             width: 8px;
             height: 8px;
@@ -295,14 +283,8 @@
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
             box-shadow: 0 5px 20px -5px rgba(142, 45, 226, 0.5);
         }
-        #send-btn:hover:not(:disabled) {
-            transform: scale(1.1);
-            box-shadow: 0 8px 25px -5px rgba(0, 229, 255, 0.6);
-        }
-        #send-btn:active:not(:disabled) {
-            transform: scale(0.95);
-            transition-duration: 0.1s;
-        }
+        #send-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 8px 25px -5px rgba(0, 229, 255, 0.6); }
+        #send-btn:active:not(:disabled) { transform: scale(0.95); transition-duration: 0.1s; }
         #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         #send-btn svg { width: 24px; height: 24px; transform: translateX(1px); }
 
@@ -351,7 +333,7 @@
             
             let conversationHistory = [];
             let typingIndicatorRef = null;
-            let totalCharsAnimated = 0;
+            let scrollInterval = null;
 
             const animationContainer = document.getElementById('logo-animation-container');
             const mainContent = document.getElementById('main-content');
@@ -405,7 +387,6 @@
                 }
             };
             
-            // --- REBUILT: Bot message handler with advanced animation ---
             const addBotMessage = (markdownText) => {
                 toggleFormState(true);
                 const rawHtml = marked.parse(markdownText);
@@ -433,17 +414,12 @@
                     pre.appendChild(copyButton);
                 });
 
-                // --- NEW: Character-by-character animation logic ---
                 let charIndex = 0;
                 const textNodes = [];
-                // TreeWalker is a robust way to get all text nodes in the element
                 const walker = document.createTreeWalker(messageElement, NodeFilter.SHOW_TEXT, null, false);
                 let node;
                 while(node = walker.nextNode()) {
-                    // Exclude text inside code blocks from animation
-                    if(!node.parentElement.closest('pre')) {
-                        textNodes.push(node);
-                    }
+                    textNodes.push(node);
                 }
 
                 textNodes.forEach(node => {
@@ -453,7 +429,6 @@
                         const span = document.createElement('span');
                         span.className = 'char-animated';
                         span.textContent = text[i];
-                        // Stagger the animation start time
                         span.style.animationDelay = `${charIndex * 0.015}s`;
                         fragment.appendChild(span);
                         charIndex++;
@@ -462,11 +437,19 @@
                 });
 
                 chatBox.appendChild(messageElement);
-                chatBox.scrollTop = chatBox.scrollHeight;
 
-                // Re-enable form after the animation is complete
-                const totalAnimationTime = charIndex * 15 + 600; // Delay per char + animation duration
+                if (scrollInterval) clearInterval(scrollInterval);
+                scrollInterval = setInterval(() => {
+                    const isScrolledNearBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 100;
+                    if (isScrolledNearBottom) {
+                        chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+                    }
+                }, 100);
+
+                const totalAnimationTime = charIndex * 15 + 600;
                 setTimeout(() => {
+                    clearInterval(scrollInterval);
+                    chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
                     toggleFormState(false);
                     userInput.focus();
                 }, totalAnimationTime);
@@ -503,9 +486,7 @@
                     userInput.value = '';
                     toggleFormState(true);
                     showTypingIndicator();
-
                     const botText = await getBotResponse(userText);
-                    
                     hideTypingIndicator();
                     addBotMessage(botText);
                 }
