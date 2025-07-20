@@ -122,55 +122,54 @@
         .chat-box::-webkit-scrollbar-thumb:hover { background: #555; }
 
         .message {
-            max-width: 80%; line-height: 1.6;
+            max-width: 80%; padding: 14px 20px;
+            border-radius: 22px; line-height: 1.6;
             word-wrap: break-word;
         }
         
         .bot-message {
             background: var(--gradient); color: white;
             align-self: flex-start;
-            border-radius: 22px;
+            animation: slideInUpFade 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1;
             border-bottom-left-radius: 6px;
-            /* The message starts empty and expands */
-            padding: 0;
-            transition: opacity 0.4s ease-out;
-        }
-        .bot-message-content {
-            padding: 14px 20px;
         }
 
         .user-message {
             background: var(--user-msg-bg); color: var(--text-light);
             align-self: flex-end;
             animation: slideInUpFade 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1;
-            border-radius: 22px;
             border-bottom-right-radius: 6px;
-            padding: 14px 20px;
         }
         .user-message p { margin: 0; }
 
-        /* FIXED: Restored natural spacing between elements */
-        .bot-message-content > :is(p, ul, ol, pre) {
-            margin-top: 0;
-            margin-bottom: 1em;
-        }
-        /* FIXED: Remove margin from the very last element */
-        .bot-message-content > :last-child {
+        .message p { margin-top: 0; } /* Remove default top margin */
+        .message ul, .message ol { margin-top: 0.5em; }
+        .message strong { font-weight: 700; }
+        /* FIXED: Remove margin from the last element to prevent extra space */
+        .message > :last-child {
             margin-bottom: 0;
         }
 
-        @keyframes unblurFadeInUp {
-            from { opacity: 0; filter: blur(5px); transform: translateY(8px); }
-            to { opacity: 1; filter: blur(0); transform: translateY(0); }
+        .bot-message .char {
+            display: inline; /* Key fix for preserving word structure */
+            opacity: 0; /* Start invisible */
         }
-        
-        .char {
-            display: inline;
-            animation: unblurFadeInUp 0.5s ease-out forwards;
+        .bot-message .char.visible {
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out;
         }
 
+        /* FIXED: List items (and their bullets) also fade in */
+        .bot-message li {
+            opacity: 0;
+        }
+        .bot-message li.visible {
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+        
         .message pre {
-            background-color: var(--code-bg);
+            background-color: var(--code-bg); margin: 1em 0;
             border: 1px solid var(--border-color);
             border-radius: 8px; padding: 15px;
             font-family: 'Courier New', Courier, monospace;
@@ -192,11 +191,8 @@
         .copy-btn:hover { opacity: 1; background-color: #4a4a4c; }
         .copy-btn.copied { background-color: var(--accent-purple); opacity: 1; }
 
-        .typing-indicator-bubble {
-            align-self: flex-start;
-            background: var(--gradient);
-            border-radius: 22px;
-            border-bottom-left-radius: 6px;
+        /* FIXED: Indicator bubble is now compact */
+        .bot-message.is-indicator {
             padding: 14px 20px;
         }
         .typing-indicator {
@@ -331,15 +327,15 @@
             };
             
             const showTypingIndicator = () => {
-                const indicatorBubble = document.createElement('div');
-                indicatorBubble.classList.add('message', 'typing-indicator-bubble');
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', 'bot-message', 'is-indicator');
                 const indicator = document.createElement('div');
                 indicator.classList.add('typing-indicator');
                 indicator.innerHTML = '<span></span><span></span><span></span>';
-                indicatorBubble.appendChild(indicator);
-                chatBox.appendChild(indicatorBubble);
+                messageElement.appendChild(indicator);
+                chatBox.appendChild(messageElement);
                 chatBox.scrollTop = chatBox.scrollHeight;
-                typingIndicatorRef = indicatorBubble;
+                typingIndicatorRef = messageElement;
             };
 
             const hideTypingIndicator = () => {
@@ -349,85 +345,77 @@
                 }
             };
             
-            // --- The Definitive Live DOM Renderer ---
             const addBotMessage = (markdownText) => {
                 toggleFormState(true);
                 const rawHtml = marked.parse(markdownText);
-                
+
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', 'bot-message');
-                const contentWrapper = document.createElement('div');
-                contentWrapper.classList.add('bot-message-content');
-                messageElement.appendChild(contentWrapper);
-                
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = rawHtml;
+                messageElement.innerHTML = rawHtml;
 
-                const actions = [];
-                function buildActionList(node) {
-                    if (node.nodeType === 1) {
-                        actions.push({ type: 'open', tag: node.nodeName });
-                        Array.from(node.childNodes).forEach(buildActionList);
-                        actions.push({ type: 'close', tag: node.nodeName });
-                    } else if (node.nodeType === 3) {
-                        actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
-                    }
-                }
-                Array.from(tempDiv.childNodes).forEach(buildActionList);
-                
-                chatBox.appendChild(messageElement);
-                messageElement.style.opacity = 0;
-
-                let currentParent = contentWrapper;
-                let parentStack = [contentWrapper];
-                let charCount = 0;
-
-                const rendererInterval = setInterval(() => {
-                    if (actions.length === 0) {
-                        clearInterval(rendererInterval);
-                        messageElement.querySelectorAll('pre').forEach(pre => {
-                            const code = pre.querySelector('code');
-                            const copyButton = document.createElement('button');
-                            copyButton.className = 'copy-btn'; copyButton.textContent = 'Copy';
-                            copyButton.onclick = () => {
-                                navigator.clipboard.writeText(code.textContent).then(() => {
-                                    copyButton.textContent = 'Copied!';
-                                    copyButton.classList.add('copied');
-                                    setTimeout(() => {
-                                        copyButton.textContent = 'Copy';
-                                        copyButton.classList.remove('copied');
-                                    }, 2000);
-                                });
-                            };
-                            pre.appendChild(copyButton);
+                const codeBlocks = messageElement.querySelectorAll('pre');
+                codeBlocks.forEach(pre => {
+                    const code = pre.querySelector('code');
+                    const copyButton = document.createElement('button');
+                    copyButton.className = 'copy-btn'; copyButton.textContent = 'Copy';
+                    copyButton.onclick = () => {
+                        navigator.clipboard.writeText(code.textContent).then(() => {
+                            copyButton.textContent = 'Copied!';
+                            copyButton.classList.add('copied');
+                            setTimeout(() => {
+                                copyButton.textContent = 'Copy';
+                                copyButton.classList.remove('copied');
+                            }, 2000);
                         });
+                    };
+                    pre.appendChild(copyButton);
+                });
+
+                const characters = [];
+                const listItems = [];
+                messageElement.querySelectorAll('li').forEach(li => {
+                    listItems.push(li);
+                });
+
+                const textNodes = [];
+                const walker = document.createTreeWalker(messageElement, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while(node = walker.nextNode()) {
+                    textNodes.push(node);
+                }
+
+                textNodes.forEach(node => {
+                    const text = node.textContent;
+                    const fragment = document.createDocumentFragment();
+                    for (let i = 0; i < text.length; i++) {
+                        const span = document.createElement('span');
+                        span.textContent = text[i];
+                        span.className = 'char';
+                        fragment.appendChild(span);
+                        characters.push(span);
+                    }
+                    node.replaceWith(fragment);
+                });
+
+                chatBox.appendChild(messageElement);
+                
+                let i = 0;
+                const rendererInterval = setInterval(() => {
+                    if (i >= characters.length) {
+                        clearInterval(rendererInterval);
                         toggleFormState(false);
                         return;
                     }
+                    const charSpan = characters[i];
+                    charSpan.classList.add('visible');
+
+                    const parentLi = charSpan.closest('li');
+                    if(parentLi && !parentLi.classList.contains('visible')){
+                        parentLi.classList.add('visible');
+                    }
                     
-                    if(charCount === 0) {
-                        messageElement.style.opacity = 1; // Make bubble visible on first character
-                    }
-
-                    const action = actions.shift();
-
-                    if (action.type === 'open') {
-                        const newElement = document.createElement(action.tag);
-                        currentParent.appendChild(newElement);
-                        parentStack.push(newElement);
-                        currentParent = newElement;
-                    } else if (action.type === 'close') {
-                        parentStack.pop();
-                        currentParent = parentStack[parentStack.length - 1];
-                    } else if (action.type === 'char') {
-                        const span = document.createElement('span');
-                        span.className = 'char';
-                        span.textContent = action.content;
-                        currentParent.appendChild(span);
-                        charCount++;
-                    }
-
                     chatBox.scrollTop = chatBox.scrollHeight;
+                    i++;
                 }, 15);
             };
 
