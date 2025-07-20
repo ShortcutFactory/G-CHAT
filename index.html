@@ -95,6 +95,7 @@
             display: flex; flex-direction: column;
             overflow: hidden;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            position: relative; /* Needed for positioning the scroll button */
         }
 
         .chat-header {
@@ -114,12 +115,44 @@
             flex-grow: 1; padding: 20px;
             overflow-y: auto; display: flex;
             flex-direction: column; gap: 15px;
+            position: relative;
         }
         
         .chat-box::-webkit-scrollbar { width: 8px; }
         .chat-box::-webkit-scrollbar-track { background: transparent; }
         .chat-box::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
         .chat-box::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* --- NEW: Scroll Down Button --- */
+        #scroll-down-btn {
+            position: absolute;
+            bottom: 85px; /* Position above the input form */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(26, 26, 28, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-out;
+        }
+        #scroll-down-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #scroll-down-btn svg {
+            width: 20px;
+            height: 20px;
+        }
 
         .message {
             max-width: 80%; line-height: 1.6;
@@ -283,6 +316,12 @@
         <div class="chat-container">
             <header class="chat-header">G-AI</header>
             <div class="chat-box" id="chat-box"></div>
+            <!-- NEW: Scroll Down Button -->
+            <button id="scroll-down-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 15a.75.75 0 01-.75-.75V7.56l-1.97 1.97a.75.75 0 11-1.06-1.06l3.5-3.5a.75.75 0 011.06 0l3.5 3.5a.75.75 0 11-1.06 1.06L10.75 7.56v6.69a.75.75 0 01-.75.75z" clip-rule="evenodd" transform="rotate(180 10 10)"/>
+                </svg>
+            </button>
             <form class="chat-form" id="chat-form">
                 <input type="text" id="user-input" placeholder="Forge your reality..." autocomplete="off">
                 <button type="submit" id="send-btn" aria-label="Send message">
@@ -306,6 +345,10 @@
             
             let conversationHistory = [];
             let typingIndicatorRef = null;
+            // --- NEW: State for scroll management ---
+            let isUserScrolledUp = false;
+            let rendererInterval = null;
+
 
             const animationContainer = document.getElementById('logo-animation-container');
             const mainContent = document.getElementById('main-content');
@@ -313,6 +356,8 @@
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
             const chatBox = document.getElementById('chat-box');
+            // --- NEW: Get the scroll button ---
+            const scrollDownBtn = document.getElementById('scroll-down-btn');
 
             try {
                 const response = await fetch('prompt.txt');
@@ -362,6 +407,10 @@
             
             const addBotMessage = (markdownText) => {
                 toggleFormState(true);
+                // Reset scroll state for new message
+                isUserScrolledUp = false;
+                scrollDownBtn.classList.remove('visible');
+
                 const rawHtml = marked.parse(markdownText);
                 
                 const messageElement = document.createElement('div');
@@ -391,9 +440,11 @@
                 let currentParent = contentWrapper;
                 let parentStack = [contentWrapper];
 
-                const rendererInterval = setInterval(() => {
+                rendererInterval = setInterval(() => {
                     if (actions.length === 0) {
                         clearInterval(rendererInterval);
+                        rendererInterval = null; // Mark as finished
+                        scrollDownBtn.classList.remove('visible'); // Hide button when done
                         messageElement.querySelectorAll('pre').forEach(pre => {
                             const code = pre.querySelector('code');
                             const copyButton = document.createElement('button');
@@ -439,9 +490,34 @@
                         charCount++;
                     }
 
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }, 1); // FIXED: Speed set to maximum (1ms interval)
+                    if (!isUserScrolledUp) {
+                         chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                   
+                }, 12);
             };
+
+            // --- NEW: Scroll Event Listeners ---
+            chatBox.addEventListener('scroll', () => {
+                const atBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 10;
+                // If the AI is typing and we are no longer at the bottom
+                if (rendererInterval && !atBottom) {
+                    isUserScrolledUp = true;
+                    scrollDownBtn.classList.add('visible');
+                }
+                // If we scroll back to the bottom manually
+                if (atBottom) {
+                    isUserScrolledUp = false;
+                    scrollDownBtn.classList.remove('visible');
+                }
+            });
+
+            scrollDownBtn.addEventListener('click', () => {
+                chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+                isUserScrolledUp = false;
+                scrollDownBtn.classList.remove('visible');
+            });
+
 
             async function getBotResponse(userText) {
                 conversationHistory.push({ role: "user", parts: [{ text: userText }] });
