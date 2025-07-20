@@ -440,7 +440,7 @@
                     }
 
                     chatBox.scrollTop = chatBox.scrollHeight;
-                }, 12);
+                }, 1); // FIXED: Speed set to maximum (1ms interval)
             };
 
             async function getBotResponse(userText) {
