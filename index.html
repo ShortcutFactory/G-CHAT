@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>G-AI 👑</title>
-    <!-- ADDED: Markdown Parsing Library -->
+    <!-- NEW: CDN for the Marked.js library to parse Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Poppins:wght@400;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code&display=swap');
+
 
         :root {
             --accent-cyan: #00B4DB; 
@@ -20,89 +21,265 @@
             --text-dark: #8e8e93;
             --border-color: rgba(51, 51, 51, 0.5);
             --user-msg-bg: #2c2c2e;
-            --code-bg: #010409;
             --gradient: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
+            --code-bg: #1e1e1e;
         }
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; overflow: hidden; background-color: var(--background); }
-        body { font-family: 'Poppins', sans-serif; color: var(--text-light); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-        /* Background effects... (unchanged) */
-        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--spotlight-color), transparent 30%); z-index: -2; pointer-events: none; will-change: background; }
-        body::after { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 1px 3px; z-index: -1; pointer-events: none; animation: scanline 10s linear infinite; will-change: transform; }
-        @keyframes scanline { from { background-position-y: 0; } to { background-position-y: 100px; } }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--background);
+        }
 
-        /* Logo and main content animations... (unchanged) */
-        #logo-animation-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: var(--background); z-index: 1000; transition: opacity 1s ease-out 0.5s; }
-        #logo-transformer { font-family: 'Orbitron', sans-serif; font-size: clamp(3rem, 15vw, 8rem); font-weight: 900; text-align: center; }
-        #main-content { opacity: 0; transition: opacity 1.2s ease-in; position: relative; z-index: 1; height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; padding: 2vh 2vw; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-light);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: -2;
+        }
+        body::before {
+            background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--spotlight-color), transparent 30%);
+        }
+        body::after {
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 1px 3px;
+            animation: scanline 10s linear infinite;
+        }
+        
+        @keyframes scanline {
+            from { background-position-y: 0; }
+            to { background-position-y: 100px; }
+        }
+
+        #logo-animation-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background-color: var(--background);
+            z-index: 1000;
+            transition: opacity 1s ease-out 0.5s;
+        }
+
+        #logo-transformer {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(3rem, 15vw, 8rem);
+            font-weight: 900;
+            text-align: center;
+        }
+        
+        #main-content {
+            opacity: 0;
+            transition: opacity 1.2s ease-in;
+            position: relative;
+            z-index: 1;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2vh 2vw;
+        }
+        
         #main-content.visible { opacity: 1; }
+        
+        .chat-container {
+            width: 100%; height: 100%; max-width: 800px;
+            background: var(--surface-alpha);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
 
-        .chat-container { width: 100%; height: 100%; max-width: 800px; background: var(--surface-alpha); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border: 1px solid var(--border-color); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
-        .chat-header { font-family: 'Orbitron', sans-serif; font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 900; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; padding: 20px; border-bottom: 1px solid var(--border-color); z-index: 2; flex-shrink: 0; background-color: rgba(26, 26, 28, 0.5); }
-        .chat-box { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
-        .chat-box::-webkit-scrollbar { width: 8px; } .chat-box::-webkit-scrollbar-track { background: transparent; } .chat-box::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; } .chat-box::-webkit-scrollbar-thumb:hover { background: #555; }
+        .chat-header {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 900;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 2;
+            flex-shrink: 0;
+            background-color: rgba(26, 26, 28, 0.5);
+        }
+        
+        .chat-box {
+            flex-grow: 1; padding: 20px;
+            overflow-y: auto; display: flex;
+            flex-direction: column; gap: 15px;
+            scroll-behavior: smooth;
+        }
+        
+        .chat-box::-webkit-scrollbar { width: 8px; }
+        .chat-box::-webkit-scrollbar-track { background: transparent; }
+        .chat-box::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        .chat-box::-webkit-scrollbar-thumb:hover { background: #555; }
 
-        .message { max-width: 80%; padding: 0; /* Padding is now on the inner .content div */ border-radius: 22px; line-height: 1.6; animation: slideInUpFade 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1; word-wrap: break-word; }
-        .bot-message { background: var(--gradient); color: white; border-bottom-left-radius: 6px; align-self: flex-start; }
-        .user-message { background: var(--user-msg-bg); color: var(--text-light); border-bottom-right-radius: 6px; align-self: flex-end; }
-        .message .content { padding: 14px 20px; }
-        .message .content p:last-child { margin-bottom: 0; }
+        .message {
+            max-width: 95%;
+            padding: 0; /* Padding is now on the inner content */
+            border-radius: 22px;
+            line-height: 1.6;
+            animation: slideInUpFade 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1;
+            word-wrap: break-word;
+        }
+        
+        .message-content {
+            padding: 14px 20px;
+        }
+        
+        .bot-message {
+            background: var(--gradient); color: white;
+            border-bottom-left-radius: 6px;
+            align-self: flex-start;
+        }
 
-        /* --- NEW: Markdown and Code Block Styling --- */
-        .bot-message strong { font-weight: 700; }
-        .bot-message a { color: var(--accent-cyan); text-decoration: none; }
-        .bot-message a:hover { text-decoration: underline; }
-        .bot-message ul, .bot-message ol { padding-left: 20px; }
+        .user-message {
+            background: var(--user-msg-bg); color: var(--text-light);
+            border-bottom-right-radius: 6px;
+            align-self: flex-end;
+        }
+        
+        /* NEW: Markdown element styling */
+        .message-content > *:first-child { margin-top: 0; }
+        .message-content > *:last-child { margin-bottom: 0; }
+        .message-content h1, .message-content h2, .message-content h3 { margin: 0.8em 0 0.5em; }
+        .message-content p { margin: 0.5em 0; }
+        .message-content ul, .message-content ol { padding-left: 25px; margin: 0.5em 0; }
+        .message-content strong { font-weight: 700; }
+        .message-content pre {
+            position: relative;
+            background-color: var(--code-bg);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 1em 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-x: auto;
+        }
+        .message-content code {
+            font-family: 'Fira Code', monospace;
+            background: rgba(0,0,0,0.2);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        .message-content pre code {
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+        }
 
-        .code-block-wrapper { position: relative; margin: 12px 0; }
-        .bot-message pre { font-family: 'Fira Code', monospace; background-color: var(--code-bg); color: var(--text-light); padding: 16px; border-radius: 8px; overflow-x: auto; white-space: pre; font-size: 0.9em; border: 1px solid var(--border-color); }
-        .bot-message code { font-family: 'Fira Code', monospace; background-color: rgba(0,0,0,0.2); padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
-        .bot-message pre code { background-color: transparent; padding: 0; border-radius: 0; font-size: inherit; }
-
+        /* NEW: Copy button styling */
         .copy-btn {
             position: absolute;
-            top: 10px; right: 10px;
-            background: #333; color: #ccc;
-            border: 1px solid #444;
-            padding: 4px 8px;
+            top: 8px; right: 8px;
+            background: #333;
+            color: var(--text-light);
+            border: none;
+            padding: 6px 10px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.8em;
-            opacity: 0.4;
-            transition: opacity 0.2s, background 0.2s;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.2s, background-color 0.2s;
         }
-        .code-block-wrapper:hover .copy-btn { opacity: 1; }
-        .copy-btn:hover { background: #444; }
-        .copy-btn.copied { background: var(--accent-purple); color: white; }
+        pre:hover .copy-btn { opacity: 1; }
+        .copy-btn:hover { background-color: #444; }
+        .copy-btn.copied { background-color: var(--accent-purple); }
 
-        /* Typing indicator styling... (unchanged) */
-        .typing-indicator { display: flex; align-items: center; gap: 5px; padding: 14px 20px; }
-        .typing-indicator span { width: 8px; height: 8px; background-color: currentColor; border-radius: 50%; animation: bounce 1.2s infinite ease-in-out; }
+        .typing-indicator {
+            display: flex; align-items: center; gap: 5px;
+            padding: 14px 20px;
+        }
+        .typing-indicator span {
+            width: 8px; height: 8px;
+            background-color: currentColor;
+            border-radius: 50%;
+            animation: bounce 1.2s infinite ease-in-out;
+        }
         .typing-indicator span:nth-child(2) { animation-delay: -0.2s; }
         .typing-indicator span:nth-child(3) { animation-delay: -0.4s; }
-        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
 
-        /* Form styling... (unchanged) */
-        .chat-form { display: flex; padding: 15px; border-top: 1px solid var(--border-color); gap: 10px; z-index: 2; flex-shrink: 0; background-color: rgba(26, 26, 28, 0.5); }
-        #user-input { flex-grow: 1; border: 1px solid transparent; background: var(--background); padding: 14px 20px; font-size: 1rem; color: var(--text-light); outline: none; border-radius: 30px; transition: border-color 0.3s ease, box-shadow 0.3s ease; }
-        #user-input:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 4px rgba(0, 229, 255, 0.15); }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+        
+        .chat-form {
+            display: flex; padding: 15px;
+            border-top: 1px solid var(--border-color);
+            gap: 10px; z-index: 2; flex-shrink: 0;
+            background-color: rgba(26, 26, 28, 0.5);
+        }
+
+        #user-input {
+            flex-grow: 1; border: 1px solid transparent;
+            background: var(--background); padding: 14px 20px;
+            font-size: 1rem; color: var(--text-light);
+            outline: none; border-radius: 30px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #user-input:focus {
+             border-color: var(--accent-cyan);
+             box-shadow: 0 0 0 4px rgba(0, 229, 255, 0.15);
+        }
         #user-input::placeholder { color: var(--text-dark); }
         #user-input:disabled { opacity: 0.5; }
-        #send-btn { background: var(--gradient); border: none; color: white; width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease; box-shadow: 0 5px 20px -5px rgba(142, 45, 226, 0.5); }
+
+        #send-btn {
+            background: var(--gradient); border: none; color: white;
+            width: 52px; height: 52px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+            box-shadow: 0 5px 20px -5px rgba(142, 45, 226, 0.5);
+        }
         #send-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 8px 25px -5px rgba(0, 229, 255, 0.6); }
         #send-btn:active:not(:disabled) { transform: scale(0.95); transition-duration: 0.1s; }
         #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         #send-btn svg { width: 24px; height: 24px; transform: translateX(1px); }
-        @keyframes slideInUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Responsive adjustments... (unchanged) */
-        @media (max-width: 768px) { .message { max-width: 98%; } .chat-box { padding: 15px; } #main-content { padding: 0; } .chat-container { border-radius: 0; border: none; } }
+
+        @keyframes slideInUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .message { max-width: 98%; }
+            .chat-box { padding: 15px; }
+            #main-content { padding: 0; }
+            .chat-container { border-radius: 0; border: none; }
+        }
     </style>
 </head>
 <body>
-    <div id="logo-animation-container"><div id="logo-transformer">G-AI</div></div>
+    <div id="logo-animation-container">
+        <div id="logo-transformer">G-AI</div>
+    </div>
+
     <div id="main-content">
         <div class="chat-container">
             <header class="chat-header">G-AI</header>
@@ -110,23 +287,30 @@
             <form class="chat-form" id="chat-form">
                 <input type="text" id="user-input" placeholder="Forge your reality..." autocomplete="off">
                 <button type="submit" id="send-btn" aria-label="Send message">
-                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                    </svg>
                 </button>
             </form>
         </div>
     </div>
 
     <script type="module">
-        document.addEventListener('DOMContentLoaded', () => { initializeChat(); });
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeChat();
+        });
 
         async function initializeChat() {
+            // --- Config ---
             const API_KEY = "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc";
             const MODEL_NAME = "gemini-2.5-flash";
             const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
             
+            // --- State ---
             let conversationHistory = [];
             let typingIndicatorRef = null;
 
+            // --- DOM Elements ---
             const animationContainer = document.getElementById('logo-animation-container');
             const mainContent = document.getElementById('main-content');
             const chatForm = document.getElementById('chat-form');
@@ -134,22 +318,68 @@
             const sendBtn = document.getElementById('send-btn');
             const chatBox = document.getElementById('chat-box');
 
+            // --- Initialization ---
             try {
                 const response = await fetch('prompt.txt');
                 if (!response.ok) throw new Error(`Failed to load prompt.txt: ${response.status}`);
                 const systemPromptText = await response.text();
-                conversationHistory.push({ role: "model", parts: [{ text: systemPromptText }] });
+                conversationHistory.push({ role: "system", parts: [{ text: systemPromptText }] });
             } catch (error) {
                 console.error("Fatal Error:", error);
-                renderBotMessage("Error: Could not load G-AI's core programming. Check console.");
+                addMessage("Error: Could not load G-AI's core programming. Check console.", 'bot', true);
                 return;
             }
+
+            // --- Core Functions ---
+            const addMessage = (text, sender, isMarkdown = false) => {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', `${sender}-message`);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.classList.add('message-content');
+                
+                if (isMarkdown) {
+                    contentDiv.innerHTML = marked.parse(text);
+                } else {
+                    contentDiv.textContent = text;
+                }
+
+                messageElement.appendChild(contentDiv);
+                chatBox.appendChild(messageElement);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                
+                if (sender === 'bot') {
+                    addCopyButtons(messageElement);
+                }
+            };
+            
+            const addCopyButtons = (messageEl) => {
+                const codeBlocks = messageEl.querySelectorAll('pre');
+                codeBlocks.forEach(block => {
+                    const button = document.createElement('button');
+                    button.className = 'copy-btn';
+                    button.textContent = 'Copy';
+                    block.appendChild(button);
+
+                    button.addEventListener('click', () => {
+                        const code = block.querySelector('code').innerText;
+                        navigator.clipboard.writeText(code).then(() => {
+                            button.textContent = 'Copied!';
+                            button.classList.add('copied');
+                            setTimeout(() => {
+                                button.textContent = 'Copy';
+                                button.classList.remove('copied');
+                            }, 2000);
+                        });
+                    });
+                });
+            };
 
             const toggleFormState = (disabled) => {
                 userInput.disabled = disabled;
                 sendBtn.disabled = disabled;
             };
-
+            
             const showTypingIndicator = () => {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', 'bot-message');
@@ -169,60 +399,28 @@
                 }
             };
             
-            const addUserMessage = (text) => {
-                const messageElement = document.createElement('div');
-                messageElement.classList.add('message', 'user-message');
-                // Wrap text in a content div for consistent padding
-                messageElement.innerHTML = `<div class="content"><p>${text}</p></div>`;
-                chatBox.appendChild(messageElement);
-                chatBox.scrollTop = chatBox.scrollHeight;
-            };
-            
-            // --- REBUILT: Renders message instantly with Markdown ---
-            const renderBotMessage = (markdownText) => {
+            // UPDATED: Adaptive typing animation
+            const animateBotMessage = (fullText) => {
                 hideTypingIndicator();
                 toggleFormState(true);
 
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message', 'bot-message');
-
-                // Sanitize and parse markdown
-                const dirtyHtml = marked.parse(markdownText);
-                
-                // Using a template element for safe HTML parsing
-                const template = document.createElement('template');
-                template.innerHTML = dirtyHtml.trim();
-                
                 const contentDiv = document.createElement('div');
-                contentDiv.classList.add('content');
-                contentDiv.appendChild(template.content);
-
+                contentDiv.classList.add('message-content');
+                
+                // Parse markdown and add content
+                contentDiv.innerHTML = marked.parse(fullText);
                 messageElement.appendChild(contentDiv);
                 chatBox.appendChild(messageElement);
+                addCopyButtons(messageElement);
                 
-                // Post-process to add copy buttons to code blocks
-                enhanceCodeBlocks(messageElement);
-
                 chatBox.scrollTop = chatBox.scrollHeight;
+
+                // Simple reveal, no character-by-character animation. This is faster and works better with complex HTML.
+                // The main "slideInUpFade" CSS animation provides the entrance effect.
                 toggleFormState(false);
                 userInput.focus();
-            };
-
-            // --- NEW: Adds copy buttons to code blocks ---
-            const enhanceCodeBlocks = (container) => {
-                const codeBlocks = container.querySelectorAll('pre');
-                codeBlocks.forEach(preElement => {
-                    const wrapper = document.createElement('div');
-                    wrapper.classList.add('code-block-wrapper');
-                    
-                    const copyButton = document.createElement('button');
-                    copyButton.classList.add('copy-btn');
-                    copyButton.textContent = 'Copy';
-                    
-                    preElement.parentNode.insertBefore(wrapper, preElement);
-                    wrapper.appendChild(preElement);
-                    wrapper.appendChild(copyButton);
-                });
             };
 
             async function getBotResponse(userText) {
@@ -231,11 +429,17 @@
                     const response = await fetch(API_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: conversationHistory })
+                        body: JSON.stringify({ contents: conversationHistory, systemInstruction: conversationHistory[0] })
                     });
                     if (!response.ok) throw new Error(`API returned status ${response.status}`);
                     const data = await response.json();
-                    const botResponse = data.candidates.content.parts.text;
+                    
+                    // Handle cases where content might be blocked
+                    if (!data.candidates || data.candidates[0].finishReason === "SAFETY") {
+                         return "My programming prevents me from answering that. Focus on the mission.";
+                    }
+                    
+                    const botResponse = data.candidates[0].content.parts[0].text;
                     conversationHistory.push({ role: "model", parts: [{ text: botResponse }] });
                     return botResponse;
                 } catch (error) {
@@ -245,34 +449,20 @@
                 }
             }
 
-            // --- NEW: Event delegation for copy buttons ---
-            chatBox.addEventListener('click', (e) => {
-                if (e.target.classList.contains('copy-btn')) {
-                    const wrapper = e.target.closest('.code-block-wrapper');
-                    const pre = wrapper.querySelector('pre');
-                    const code = pre.textContent;
-
-                    navigator.clipboard.writeText(code).then(() => {
-                        e.target.textContent = 'Copied!';
-                        e.target.classList.add('copied');
-                        setTimeout(() => {
-                            e.target.textContent = 'Copy';
-                            e.target.classList.remove('copied');
-                        }, 2000);
-                    });
-                }
-            });
-
+            // --- Event Handlers & Initial Load ---
             chatForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const userText = userInput.value.trim();
                 if (userText && !userInput.disabled) {
-                    addUserMessage(userText);
+                    addMessage(userText, 'user');
                     userInput.value = '';
                     toggleFormState(true);
+                    
                     showTypingIndicator();
+
                     const botText = await getBotResponse(userText);
-                    renderBotMessage(botText);
+                    
+                    animateBotMessage(botText);
                 }
             });
 
@@ -288,7 +478,7 @@
                 setTimeout(() => {
                     const initialMessage = `They want you to be a pawn. I program kings.\n\nYour move.`;
                     conversationHistory.push({ role: "model", parts: [{ text: initialMessage }] });
-                    renderBotMessage(initialMessage);
+                    animateBotMessage(initialMessage);
                 }, 800);
             }, 1500);
         }
