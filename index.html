@@ -132,8 +132,8 @@
             border-radius: 22px;
             border-bottom-left-radius: 6px;
             padding: 0;
-            opacity: 0; /* Start invisible, fade in on first character */
-            transition: opacity 0.4s ease-out;
+            opacity: 0; /* Animation starts with bubble invisible */
+            animation: unblurFadeInUp 0.5s ease-out forwards;
         }
         .bot-message-content {
             padding: 14px 20px;
@@ -156,24 +156,24 @@
         .bot-message-content > :last-child {
             margin-bottom: 0;
         }
-        /* ADDED: More spacing for list items */
+
+        /* UPDATED: Add spacing to list items for readability */
         .bot-message-content li {
-            margin-bottom: 0.5em;
+            margin-bottom: 0.75em;
         }
         .bot-message-content li:last-child {
             margin-bottom: 0;
         }
 
-        /* RESTORED: High-fidelity animation */
+        /* UPDATED: AI message animation */
         @keyframes unblurFadeInUp {
-            from { opacity: 0; filter: blur(5px); transform: translateY(8px); }
+            from { opacity: 0; filter: blur(5px); transform: translateY(10px); }
             to { opacity: 1; filter: blur(0); transform: translateY(0); }
         }
         
         .char {
-            display: inline-block; /* Use inline-block for transform */
-            opacity: 0; /* Start hidden */
-            animation: unblurFadeInUp 0.5s ease-out forwards;
+            display: inline-block;
+            animation: unblurFadeInUp 0.6s ease-out forwards;
         }
 
         .message pre {
@@ -209,18 +209,20 @@
         .typing-indicator {
             display: flex; align-items: center; gap: 5px;
         }
+
+        /* UPDATED: Reversed the typing indicator animation */
         .typing-indicator span {
             width: 8px; height: 8px;
             background-color: currentColor; border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out;
+            animation: bounce 1.2s infinite ease-in-out;
+            animation-direction: reverse; /* Reverses the animation */
         }
         .typing-indicator span:nth-child(2) { animation-delay: -0.2s; }
         .typing-indicator span:nth-child(3) { animation-delay: -0.4s; }
 
-        /* REVERSED: Indicator animation */
         @keyframes bounce {
-            0%, 100% { transform: scale(1.0); }
-            50% { transform: scale(0); }
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
         }
         
         .chat-form {
@@ -297,8 +299,8 @@
         });
 
         async function initializeChat() {
-            const API_KEY = "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc"; 
-            const MODEL_NAME = "gemini-2.5-flash";
+            const API_KEY = "YOUR_API_KEY"; // Replace with your actual API key
+            const MODEL_NAME = "gemini-1.5-flash";
             const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
             
             let conversationHistory = [];
@@ -312,9 +314,8 @@
             const chatBox = document.getElementById('chat-box');
 
             try {
-                const response = await fetch('prompt.txt');
-                if (!response.ok) throw new Error(`Failed to load prompt.txt: ${response.status}`);
-                const systemPromptText = await response.text();
+                // Simulating fetching a system prompt. You can replace this with a real fetch if you have a prompt.txt file.
+                const systemPromptText = "You are G-AI, a confident and direct AI assistant. You are not a pawn; you program kings. Your tone is assertive, motivational, and slightly edgy. You provide clear, concise, and powerful answers. You use markdown for formatting when necessary, especially for lists and code blocks.";
                 conversationHistory.push({ role: "model", parts: [{ text: systemPromptText }] });
             } catch (error) {
                 console.error("Fatal Error:", error);
@@ -372,27 +373,26 @@
 
                 const actions = [];
                 function buildActionList(node) {
-                    if (node.nodeType === 1) {
+                    if (node.nodeType === 1) { // Element node
                         actions.push({ type: 'open', tag: node.nodeName });
                         Array.from(node.childNodes).forEach(buildActionList);
                         actions.push({ type: 'close', tag: node.nodeName });
-                    } else if (node.nodeType === 3) {
+                    } else if (node.nodeType === 3) { // Text node
                         actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
                     }
                 }
                 Array.from(tempDiv.childNodes).forEach(buildActionList);
                 
                 chatBox.appendChild(messageElement);
-                messageElement.style.opacity = 0;
-
+                
                 let currentParent = contentWrapper;
                 let parentStack = [contentWrapper];
-                let charCount = 0;
 
                 const rendererInterval = setInterval(() => {
                     if (actions.length === 0) {
                         clearInterval(rendererInterval);
                         messageElement.querySelectorAll('pre').forEach(pre => {
+                            if (pre.querySelector('.copy-btn')) return; // Don't add a button if it exists
                             const code = pre.querySelector('code');
                             const copyButton = document.createElement('button');
                             copyButton.className = 'copy-btn'; copyButton.textContent = 'Copy';
@@ -411,10 +411,6 @@
                         toggleFormState(false);
                         return;
                     }
-                    
-                    if(charCount === 0) {
-                        messageElement.style.opacity = 1;
-                    }
 
                     const action = actions.shift();
 
@@ -429,15 +425,13 @@
                     } else if (action.type === 'char') {
                         const span = document.createElement('span');
                         span.className = 'char';
-                        span.textContent = action.content;
-                        // Apply staggered delay for the animation
-                        span.style.animationDelay = `${charCount * 0.015}s`;
+                        span.style.animationDelay = `${(actions.length * 0.01).toFixed(2)}s`;
+                        span.textContent = (action.content === ' ') ? '\u00A0' : action.content; // Use non-breaking space
                         currentParent.appendChild(span);
-                        charCount++;
                     }
 
                     chatBox.scrollTop = chatBox.scrollHeight;
-                }, 15);
+                }, 15); 
             };
 
             async function getBotResponse(userText) {
