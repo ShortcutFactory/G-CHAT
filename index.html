@@ -354,6 +354,7 @@
                 typingIndicatorRef: null,
                 isUserScrolledUp: false,
                 isBotTyping: false,
+                rendererInterval: null,
 
                 // --- DOM ELEMENTS ---
                 elements: {
@@ -406,7 +407,7 @@
                 addEventListeners() {
                     this.elements.chatForm.addEventListener('submit', this.handleFormSubmit.bind(this));
                     this.elements.chatBox.addEventListener('scroll', this.handleScroll.bind(this));
-                    this.elements.scrollDownBtn.addEventListener('click', this.scrollToBottom.bind(this));
+                    this.elements.scrollDownBtn.addEventListener('click', () => this.scrollToBottom(true));
                     window.addEventListener('mousemove', this.updateSpotlight);
                 },
 
@@ -419,67 +420,90 @@
                 addMessage(text, cssClass) {
                     const messageElement = document.createElement('div');
                     messageElement.classList.add('message', cssClass);
-                    messageElement.innerHTML = `<p>${text}</p>`;
+                    messageElement.innerHTML = `<p>${text}</p>`; // Using innerHTML to render potential line breaks
                     this.elements.chatBox.appendChild(messageElement);
-                    this.scrollToBottom();
+                    this.scrollToBottom(false); // Scroll immediately, not smoothly
                     return messageElement;
                 },
 
                 addBotMessage(markdownText) {
                     this.setFormState(true);
                     this.isBotTyping = true;
-
-                    const messageElement = document.createElement('div');
-                    messageElement.className = 'message bot-message';
+                
+                    const rawHtml = marked.parse(markdownText);
                     
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('message', 'bot-message');
                     const contentWrapper = document.createElement('div');
-                    contentWrapper.className = 'bot-message-content';
+                    contentWrapper.classList.add('bot-message-content');
                     messageElement.appendChild(contentWrapper);
                     
-                    contentWrapper.innerHTML = marked.parse(markdownText);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = rawHtml;
+                
+                    const actions = [];
+                    const buildActionList = (node) => {
+                        if (node.nodeType === 1) { // Element node
+                            actions.push({ type: 'open', tag: node.nodeName });
+                            Array.from(node.childNodes).forEach(buildActionList);
+                            actions.push({ type: 'close', tag: node.nodeName });
+                        } else if (node.nodeType === 3) { // Text node
+                            actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
+                        }
+                    }
+                    Array.from(tempDiv.childNodes).forEach(buildActionList);
                     
                     this.elements.chatBox.appendChild(messageElement);
-                    this.scrollToBottom();
                     
-                    // Typing animation for the text
-                    const chars = this.animateMessageChars(contentWrapper, () => {
-                        this.addCodeCopyButtons(messageElement);
-                        this.setFormState(false);
-                        this.isBotTyping = false;
-                    });
-                    
-                    // Fade in the bubble
-                    requestAnimationFrame(() => messageElement.classList.add('visible'));
-                },
+                    let charCount = 0;
+                    let currentParent = contentWrapper;
+                    let parentStack = [contentWrapper];
                 
-                animateMessageChars(container, onComplete) {
-                    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-                    const textNodes = [];
-                    while(walker.nextNode()) textNodes.push(walker.currentNode);
+                    if (this.rendererInterval) clearInterval(this.rendererInterval);
 
-                    let charIndex = 0;
-                    textNodes.forEach(node => {
-                        const text = node.nodeValue;
-                        const parent = node.parentNode;
-                        const fragment = document.createDocumentFragment();
-                        for (const char of text) {
+                    this.rendererInterval = setInterval(() => {
+                        if (actions.length === 0) {
+                            clearInterval(this.rendererInterval);
+                            this.rendererInterval = null;
+                            this.addCodeCopyButtons(messageElement);
+                            this.setFormState(false);
+                            this.isBotTyping = false;
+                            this.handleScroll(); // Check if scroll button should be shown
+                            return;
+                        }
+                        
+                        if (charCount === 0) {
+                            messageElement.classList.add('visible');
+                        }
+                
+                        const action = actions.shift();
+                
+                        if (action.type === 'open') {
+                            const newElement = document.createElement(action.tag);
+                            currentParent.appendChild(newElement);
+                            parentStack.push(newElement);
+                            currentParent = newElement;
+                        } else if (action.type === 'close') {
+                            parentStack.pop();
+                            currentParent = parentStack[parentStack.length - 1];
+                        } else if (action.type === 'char') {
                             const span = document.createElement('span');
                             span.className = 'char';
-                            span.textContent = char;
-                            span.style.transitionDelay = `${charIndex * 10}ms`;
-                            fragment.appendChild(span);
-                            charIndex++;
+                            span.textContent = action.content;
+                            currentParent.appendChild(span);
+                            requestAnimationFrame(() => {
+                                span.classList.add('visible');
+                            });
+                            charCount++;
                         }
-                        parent.replaceChild(fragment, node);
-                    });
-                    
-                    setTimeout(() => {
-                        container.querySelectorAll('.char').forEach(c => c.classList.add('visible'));
-                    }, 50);
-
-                    setTimeout(onComplete, charIndex * 10 + 250);
+                
+                        if (!this.isUserScrolledUp) {
+                             this.scrollToBottom(false);
+                        }
+                       
+                    }, 12); // Interval for live expansion
                 },
-
+                
                 addCodeCopyButtons(messageElement) {
                     messageElement.querySelectorAll('pre').forEach(pre => {
                         const code = pre.querySelector('code');
@@ -505,17 +529,14 @@
                 toggleTypingIndicator(show) {
                     if (show) {
                         if (this.typingIndicatorRef) return;
-                        const indicatorBubble = document.createElement('div');
-                        indicatorBubble.className = 'message typing-indicator-bubble';
-                        indicatorBubble.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
-                        this.elements.chatBox.appendChild(indicatorBubble);
-                        this.typingIndicatorRef = indicatorBubble;
+                        this.typingIndicatorRef = this.addMessage('', 'typing-indicator-bubble');
+                        this.typingIndicatorRef.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
                     } else {
                         if (!this.typingIndicatorRef) return;
                         this.typingIndicatorRef.remove();
                         this.typingIndicatorRef = null;
                     }
-                    this.scrollToBottom();
+                    this.scrollToBottom(false);
                 },
 
                 // --- FORM & USER INPUT ---
@@ -572,8 +593,10 @@
                 
                 // --- SCROLL HANDLING ---
                 handleScroll() {
-                    const atBottom = this.elements.chatBox.scrollHeight - this.elements.chatBox.clientHeight <= this.elements.chatBox.scrollTop + 20;
+                    const el = this.elements.chatBox;
+                    const atBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + 20;
                     this.isUserScrolledUp = !atBottom;
+                    
                     if (this.isUserScrolledUp && !this.isBotTyping) {
                         this.elements.scrollDownBtn.classList.add('visible');
                     } else {
