@@ -266,7 +266,7 @@
             display: flex; padding: 15px;
             border-top: 1px solid var(--border-color);
             gap: 10px; z-index: 2; flex-shrink: 0;
-            background-color: rgba(26, 26, 28, 0.5);
+            background-color: rgba(26, 26, 28,.5);
         }
 
         #user-input {
@@ -322,16 +322,16 @@
     <div id="main-content">
         <div class="chat-container">
             <header class="chat-header">G-AI</header>
-            <div class="chat-box" id="chat-box"></div>
-            <button id="scroll-down-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <div class="chat-box" id="chat-box" role="log" aria-live="polite"></div>
+            <button id="scroll-down-btn" aria-label="Scroll to bottom">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd" d="M10 15a.75.75 0 01-.75-.75V7.56l-1.97 1.97a.75.75 0 11-1.06-1.06l3.5-3.5a.75.75 0 011.06 0l3.5 3.5a.75.75 0 11-1.06 1.06L10.75 7.56v6.69a.75.75 0 01-.75-.75z" clip-rule="evenodd" transform="rotate(180 10 10)"/>
                 </svg>
             </button>
             <form class="chat-form" id="chat-form">
-                <input type="text" id="user-input" placeholder="Forge your reality..." autocomplete="off">
+                <input type="text" id="user-input" placeholder="Forge your reality..." autocomplete="off" aria-label="Your message">
                 <button type="submit" id="send-btn" aria-label="Send message">
-                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
                 </button>
@@ -341,230 +341,256 @@
 
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
-            initializeChat();
-        });
-
-        async function initializeChat() {
-            const API_KEY = "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc"; 
-            const MODEL_NAME = "gemini-2.5-flash";
-            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
-            
-            let conversationHistory = [];
-            let typingIndicatorRef = null;
-            let isUserScrolledUp = false;
-            let rendererInterval = null;
-
-
-            const animationContainer = document.getElementById('logo-animation-container');
-            const mainContent = document.getElementById('main-content');
-            const chatForm = document.getElementById('chat-form');
-            const userInput = document.getElementById('user-input');
-            const sendBtn = document.getElementById('send-btn');
-            const chatBox = document.getElementById('chat-box');
-            const scrollDownBtn = document.getElementById('scroll-down-btn');
-
-            try {
-                const response = await fetch('prompt.txt');
-                if (!response.ok) throw new Error(`Failed to load prompt.txt: ${response.status}`);
-                const systemPromptText = await response.text();
-                conversationHistory.push({ role: "model", parts: [{ text: systemPromptText }] });
-            } catch (error) {
-                console.error("Fatal Error:", error);
-                addMessage("Error: Could not load G-AI's core programming.", 'bot');
-                return;
-            }
-
-            const addMessage = (text, sender) => {
-                const messageElement = document.createElement('div');
-                messageElement.classList.add('message', `${sender}-message`);
-                const p = document.createElement('p');
-                p.textContent = text;
-                messageElement.appendChild(p);
-                chatBox.appendChild(messageElement);
-                chatBox.scrollTop = chatBox.scrollHeight;
-            };
-
-            const toggleFormState = (disabled) => {
-                userInput.disabled = disabled;
-                sendBtn.disabled = disabled;
-                if (!disabled) userInput.focus();
-            };
-            
-            const showTypingIndicator = () => {
-                const indicatorBubble = document.createElement('div');
-                indicatorBubble.classList.add('message', 'typing-indicator-bubble');
-                const indicator = document.createElement('div');
-                indicator.classList.add('typing-indicator');
-                indicator.innerHTML = '<span></span><span></span><span></span>';
-                indicatorBubble.appendChild(indicator);
-                chatBox.appendChild(indicatorBubble);
-                chatBox.scrollTop = chatBox.scrollHeight;
-                typingIndicatorRef = indicatorBubble;
-            };
-
-            const hideTypingIndicator = () => {
-                if (typingIndicatorRef) {
-                    typingIndicatorRef.remove();
-                    typingIndicatorRef = null;
-                }
-            };
-            
-            const addBotMessage = (markdownText) => {
-                toggleFormState(true);
-                isUserScrolledUp = false;
-
-                const rawHtml = marked.parse(markdownText);
+            const chatApp = {
+                // --- CONFIGURATION ---
+                API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
+                MODEL_NAME: "gemini-1.5-flash",
+                get API_URL() {
+                    return `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${this.API_KEY}`;
+                },
                 
-                const messageElement = document.createElement('div');
-                messageElement.classList.add('message', 'bot-message');
-                const contentWrapper = document.createElement('div');
-                contentWrapper.classList.add('bot-message-content');
-                messageElement.appendChild(contentWrapper);
+                // --- STATE ---
+                conversationHistory: [],
+                typingIndicatorRef: null,
+                isUserScrolledUp: false,
+                isBotTyping: false,
+
+                // --- DOM ELEMENTS ---
+                elements: {
+                    animationContainer: document.getElementById('logo-animation-container'),
+                    mainContent: document.getElementById('main-content'),
+                    chatForm: document.getElementById('chat-form'),
+                    userInput: document.getElementById('user-input'),
+                    sendBtn: document.getElementById('send-btn'),
+                    chatBox: document.getElementById('chat-box'),
+                    scrollDownBtn: document.getElementById('scroll-down-btn'),
+                },
                 
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = rawHtml;
-
-                const actions = [];
-                function buildActionList(node) {
-                    if (node.nodeType === 1) {
-                        actions.push({ type: 'open', tag: node.nodeName });
-                        Array.from(node.childNodes).forEach(buildActionList);
-                        actions.push({ type: 'close', tag: node.nodeName });
-                    } else if (node.nodeType === 3) {
-                        actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
+                // --- INITIALIZATION ---
+                async init() {
+                    this.addEventListeners();
+                    try {
+                        await this.loadInitialPrompt();
+                        this.runIntroAnimation();
+                    } catch (error) {
+                        console.error("Fatal Error during initialization:", error);
+                        this.addMessage("Error: Could not load G-AI's core programming.", 'bot-message');
                     }
-                }
-                Array.from(tempDiv.childNodes).forEach(buildActionList);
+                },
                 
-                chatBox.appendChild(messageElement);
-                
-                let charCount = 0;
-                let currentParent = contentWrapper;
-                let parentStack = [contentWrapper];
-
-                rendererInterval = setInterval(() => {
-                    if (actions.length === 0) {
-                        clearInterval(rendererInterval);
-                        rendererInterval = null;
-                        messageElement.querySelectorAll('pre').forEach(pre => {
-                            const code = pre.querySelector('code');
-                            const copyButton = document.createElement('button');
-                            copyButton.className = 'copy-btn'; copyButton.textContent = 'Copy';
-                            copyButton.onclick = () => {
-                                navigator.clipboard.writeText(code.textContent).then(() => {
-                                    copyButton.textContent = 'Copied!';
-                                    copyButton.classList.add('copied');
-                                    setTimeout(() => {
-                                        copyButton.textContent = 'Copy';
-                                        copyButton.classList.remove('copied');
-                                    }, 2000);
-                                });
-                            };
-                            pre.appendChild(copyButton);
-                        });
-                        toggleFormState(false);
-                        return;
-                    }
-                    
-                    if(charCount === 0) {
-                        messageElement.classList.add('visible');
-                    }
-
-                    const action = actions.shift();
-
-                    if (action.type === 'open') {
-                        const newElement = document.createElement(action.tag);
-                        currentParent.appendChild(newElement);
-                        parentStack.push(newElement);
-                        currentParent = newElement;
-                    } else if (action.type === 'close') {
-                        parentStack.pop();
-                        currentParent = parentStack[parentStack.length - 1];
-                    } else if (action.type === 'char') {
-                        const span = document.createElement('span');
-                        span.className = 'char';
-                        span.textContent = action.content;
-                        currentParent.appendChild(span);
-                        requestAnimationFrame(() => {
-                            span.classList.add('visible');
-                        });
-                        charCount++;
-                    }
-
-                    if (!isUserScrolledUp) {
-                         chatBox.scrollTop = chatBox.scrollHeight;
-                    }
-                   
-                }, 12);
-            };
-
-            chatBox.addEventListener('scroll', () => {
-                const atBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 20;
-                if (!atBottom) {
-                    isUserScrolledUp = true;
-                    scrollDownBtn.classList.add('visible');
-                } else {
-                    isUserScrolledUp = false;
-                    scrollDownBtn.classList.remove('visible');
-                }
-            });
-
-            scrollDownBtn.addEventListener('click', () => {
-                chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
-                isUserScrolledUp = false;
-            });
-
-
-            async function getBotResponse(userText) {
-                conversationHistory.push({ role: "user", parts: [{ text: userText }] });
-                try {
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: conversationHistory })
-                    });
-                    if (!response.ok) throw new Error(`API returned status ${response.status}`);
-                    const data = await response.json();
-                    const botResponse = data.candidates[0].content.parts[0].text;
-                    conversationHistory.push({ role: "model", parts: [{ text: botResponse }] });
-                    return botResponse;
-                } catch (error) {
-                    console.error("Failed to get bot response:", error);
-                    conversationHistory.pop();
-                    return "The network is weak. A true G controls his environment. Fix it.";
-                }
-            }
-
-            chatForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const userText = userInput.value.trim();
-                if (userText && !userInput.disabled) {
-                    addMessage(userText, 'user');
-                    userInput.value = '';
-                    toggleFormState(true);
-                    showTypingIndicator();
-                    const botText = await getBotResponse(userText);
-                    hideTypingIndicator();
-                    addBotMessage(botText);
-                }
-            });
-
-            window.addEventListener('mousemove', (e) => {
-                document.body.style.setProperty('--x', e.clientX + 'px');
-                document.body.style.setProperty('--y', e.clientY + 'px');
-            });
-            
-            setTimeout(() => {
-                animationContainer.style.opacity = '0';
-                mainContent.classList.add('visible');
-                setTimeout(() => animationContainer.style.display = 'none', 1000);
-                setTimeout(() => {
+                async loadInitialPrompt() {
+                    const response = await fetch('prompt.txt');
+                    if (!response.ok) throw new Error(`Failed to load prompt.txt: ${response.status}`);
+                    const systemPromptText = await response.text();
+                    this.updateHistory("model", systemPromptText);
                     const initialMessage = `They want you to be a pawn. I program kings.\n\nYour move.`;
-                    conversationHistory.push({ role: "model", parts: [{ text: initialMessage }] });
-                    addBotMessage(initialMessage);
-                }, 800);
-            }, 1500);
-        }
+                    this.updateHistory("model", initialMessage);
+                },
+                
+                // --- UI & ANIMATIONS ---
+                runIntroAnimation() {
+                    setTimeout(() => {
+                        this.elements.animationContainer.style.opacity = '0';
+                        this.elements.mainContent.classList.add('visible');
+                        this.elements.animationContainer.addEventListener('transitionend', () => {
+                            this.elements.animationContainer.style.display = 'none';
+                        }, { once: true });
+
+                        setTimeout(() => {
+                            const initialMessage = this.conversationHistory[this.conversationHistory.length - 1].parts[0].text;
+                            this.addBotMessage(initialMessage);
+                        }, 800);
+                    }, 1500);
+                },
+
+                addEventListeners() {
+                    this.elements.chatForm.addEventListener('submit', this.handleFormSubmit.bind(this));
+                    this.elements.chatBox.addEventListener('scroll', this.handleScroll.bind(this));
+                    this.elements.scrollDownBtn.addEventListener('click', this.scrollToBottom.bind(this));
+                    window.addEventListener('mousemove', this.updateSpotlight);
+                },
+
+                updateSpotlight(e) {
+                    document.body.style.setProperty('--x', `${e.clientX}px`);
+                    document.body.style.setProperty('--y', `${e.clientY}px`);
+                },
+
+                // --- MESSAGE HANDLING ---
+                addMessage(text, cssClass) {
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('message', cssClass);
+                    messageElement.innerHTML = `<p>${text}</p>`;
+                    this.elements.chatBox.appendChild(messageElement);
+                    this.scrollToBottom();
+                    return messageElement;
+                },
+
+                addBotMessage(markdownText) {
+                    this.setFormState(true);
+                    this.isBotTyping = true;
+
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'message bot-message';
+                    
+                    const contentWrapper = document.createElement('div');
+                    contentWrapper.className = 'bot-message-content';
+                    messageElement.appendChild(contentWrapper);
+                    
+                    contentWrapper.innerHTML = marked.parse(markdownText);
+                    
+                    this.elements.chatBox.appendChild(messageElement);
+                    this.scrollToBottom();
+                    
+                    // Typing animation for the text
+                    const chars = this.animateMessageChars(contentWrapper, () => {
+                        this.addCodeCopyButtons(messageElement);
+                        this.setFormState(false);
+                        this.isBotTyping = false;
+                    });
+                    
+                    // Fade in the bubble
+                    requestAnimationFrame(() => messageElement.classList.add('visible'));
+                },
+                
+                animateMessageChars(container, onComplete) {
+                    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+                    const textNodes = [];
+                    while(walker.nextNode()) textNodes.push(walker.currentNode);
+
+                    let charIndex = 0;
+                    textNodes.forEach(node => {
+                        const text = node.nodeValue;
+                        const parent = node.parentNode;
+                        const fragment = document.createDocumentFragment();
+                        for (const char of text) {
+                            const span = document.createElement('span');
+                            span.className = 'char';
+                            span.textContent = char;
+                            span.style.transitionDelay = `${charIndex * 10}ms`;
+                            fragment.appendChild(span);
+                            charIndex++;
+                        }
+                        parent.replaceChild(fragment, node);
+                    });
+                    
+                    setTimeout(() => {
+                        container.querySelectorAll('.char').forEach(c => c.classList.add('visible'));
+                    }, 50);
+
+                    setTimeout(onComplete, charIndex * 10 + 250);
+                },
+
+                addCodeCopyButtons(messageElement) {
+                    messageElement.querySelectorAll('pre').forEach(pre => {
+                        const code = pre.querySelector('code');
+                        if (!code) return;
+                        const copyButton = document.createElement('button');
+                        copyButton.className = 'copy-btn';
+                        copyButton.textContent = 'Copy';
+                        copyButton.setAttribute('aria-label', 'Copy code snippet');
+                        copyButton.onclick = () => {
+                            navigator.clipboard.writeText(code.textContent).then(() => {
+                                copyButton.textContent = 'Copied!';
+                                copyButton.classList.add('copied');
+                                setTimeout(() => {
+                                    copyButton.textContent = 'Copy';
+                                    copyButton.classList.remove('copied');
+                                }, 2000);
+                            });
+                        };
+                        pre.appendChild(copyButton);
+                    });
+                },
+
+                toggleTypingIndicator(show) {
+                    if (show) {
+                        if (this.typingIndicatorRef) return;
+                        const indicatorBubble = document.createElement('div');
+                        indicatorBubble.className = 'message typing-indicator-bubble';
+                        indicatorBubble.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+                        this.elements.chatBox.appendChild(indicatorBubble);
+                        this.typingIndicatorRef = indicatorBubble;
+                    } else {
+                        if (!this.typingIndicatorRef) return;
+                        this.typingIndicatorRef.remove();
+                        this.typingIndicatorRef = null;
+                    }
+                    this.scrollToBottom();
+                },
+
+                // --- FORM & USER INPUT ---
+                async handleFormSubmit(e) {
+                    e.preventDefault();
+                    const userText = this.elements.userInput.value.trim();
+                    if (userText && !this.elements.userInput.disabled) {
+                        this.addMessage(userText, 'user-message');
+                        this.updateHistory("user", userText);
+                        this.elements.userInput.value = '';
+                        this.setFormState(true);
+                        this.toggleTypingIndicator(true);
+                        
+                        try {
+                            const botText = await this.getBotResponse();
+                            this.updateHistory("model", botText);
+                            this.toggleTypingIndicator(false);
+                            this.addBotMessage(botText);
+                        } catch (error) {
+                            this.toggleTypingIndicator(false);
+                            this.addBotMessage("My apologies, but I've encountered a network error. Please try again shortly.");
+                            this.setFormState(false);
+                        }
+                    }
+                },
+
+                setFormState(disabled) {
+                    this.elements.userInput.disabled = disabled;
+                    this.elements.sendBtn.disabled = disabled;
+                    if (!disabled) this.elements.userInput.focus();
+                },
+                
+                // --- API & DATA ---
+                updateHistory(role, text) {
+                    this.conversationHistory.push({ role, parts: [{ text }] });
+                },
+
+                async getBotResponse() {
+                    try {
+                        const response = await fetch(this.API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: this.conversationHistory })
+                        });
+                        if (!response.ok) throw new Error(`API error: ${response.status}`);
+                        const data = await response.json();
+                        return data.candidates[0].content.parts[0].text;
+                    } catch (error) {
+                        console.error("Failed to get bot response:", error);
+                        this.conversationHistory.pop(); // Remove user message from history on failure
+                        throw error;
+                    }
+                },
+                
+                // --- SCROLL HANDLING ---
+                handleScroll() {
+                    const atBottom = this.elements.chatBox.scrollHeight - this.elements.chatBox.clientHeight <= this.elements.chatBox.scrollTop + 20;
+                    this.isUserScrolledUp = !atBottom;
+                    if (this.isUserScrolledUp && !this.isBotTyping) {
+                        this.elements.scrollDownBtn.classList.add('visible');
+                    } else {
+                        this.elements.scrollDownBtn.classList.remove('visible');
+                    }
+                },
+
+                scrollToBottom(smooth = true) {
+                    this.elements.chatBox.scrollTo({ 
+                        top: this.elements.chatBox.scrollHeight, 
+                        behavior: smooth ? 'smooth' : 'auto' 
+                    });
+                },
+            };
+            
+            chatApp.init();
+        });
     </script>
 </body>
 </html>
