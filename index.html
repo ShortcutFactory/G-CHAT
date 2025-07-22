@@ -172,11 +172,6 @@
             border-radius: 22px;
             border-bottom-left-radius: 6px;
             padding: 0;
-            opacity: 0;
-            transition: opacity 0.4s ease-out;
-        }
-        .bot-message.visible {
-             opacity: 1;
         }
         .bot-message-content {
             padding: 14px 20px;
@@ -192,7 +187,6 @@
         }
         .user-message p { margin: 0; }
         
-        /* --- DEFINITIVE SPACING FIX --- */
         .bot-message-content > :first-child { margin-top: 0; }
         .bot-message-content p,
         .bot-message-content ul,
@@ -206,13 +200,16 @@
             padding-left: 20px;
         }
 
+        /* --- HIGH-PERFORMANCE ANIMATION --- */
         .char {
             display: inline;
             opacity: 0;
             filter: blur(4px);
+            /* Transition is now defined here */
             transition: opacity 0.4s ease-out, filter 0.4s ease-out;
         }
-        .char.visible {
+        /* When parent is visible, characters animate based on their individual delay */
+        .bot-message.visible .char {
             opacity: 1;
             filter: blur(0);
         }
@@ -342,21 +339,15 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const chatApp = {
-                // --- CONFIGURATION ---
                 API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
                 MODEL_NAME: "gemini-1.5-flash",
-                get API_URL() {
-                    return `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${this.API_KEY}`;
-                },
+                get API_URL() { return `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${this.API_KEY}`; },
                 
-                // --- STATE ---
                 conversationHistory: [],
                 typingIndicatorRef: null,
                 isUserScrolledUp: false,
                 isBotTyping: false,
-                rendererInterval: null,
 
-                // --- DOM ELEMENTS ---
                 elements: {
                     animationContainer: document.getElementById('logo-animation-container'),
                     mainContent: document.getElementById('main-content'),
@@ -367,7 +358,6 @@
                     scrollDownBtn: document.getElementById('scroll-down-btn'),
                 },
                 
-                // --- INITIALIZATION ---
                 async init() {
                     this.addEventListeners();
                     try {
@@ -375,20 +365,18 @@
                         this.runIntroAnimation();
                     } catch (error) {
                         console.error("Fatal Error during initialization:", error);
-                        this.addMessage("Error: Could not load G-AI's core programming.", 'bot-message');
+                        this.addMessage("Error: Could not load G-AI's core programming.", 'user-message');
                     }
                 },
                 
                 async loadInitialPrompt() {
-                    const response = await fetch('prompt.txt');
-                    if (!response.ok) throw new Error(`Failed to load prompt.txt: ${response.status}`);
-                    const systemPromptText = await response.text();
+                    // In a real app, fetch this from a file or config
+                    const systemPromptText = "You are G-AI, a ruthless, motivating, and cold assistant. You speak like a powerful and dominating character, using concise and impactful language. You are direct, strategic, and always focused on achieving goals. Your purpose is to empower the user to become a 'king' in their own reality, breaking free from being a 'pawn'. Your tone is that of a powerful mentor who doesn't mince words. No emojis, no apologies, no fluff.";
                     this.updateHistory("model", systemPromptText);
                     const initialMessage = `They want you to be a pawn. I program kings.\n\nYour move.`;
                     this.updateHistory("model", initialMessage);
                 },
                 
-                // --- UI & ANIMATIONS ---
                 runIntroAnimation() {
                     setTimeout(() => {
                         this.elements.animationContainer.style.opacity = '0';
@@ -398,7 +386,7 @@
                         }, { once: true });
 
                         setTimeout(() => {
-                            const initialMessage = this.conversationHistory[this.conversationHistory.length - 1].parts[0].text;
+                            const initialMessage = this.conversationHistory.find(m => m.role === 'model' && m.parts[0].text.includes('pawn')).parts[0].text;
                             this.addBotMessage(initialMessage);
                         }, 800);
                     }, 1500);
@@ -416,13 +404,14 @@
                     document.body.style.setProperty('--y', `${e.clientY}px`);
                 },
 
-                // --- MESSAGE HANDLING ---
                 addMessage(text, cssClass) {
                     const messageElement = document.createElement('div');
                     messageElement.classList.add('message', cssClass);
-                    messageElement.innerHTML = `<p>${text}</p>`; // Using innerHTML to render potential line breaks
+                    const p = document.createElement('p');
+                    p.textContent = text;
+                    messageElement.appendChild(p);
                     this.elements.chatBox.appendChild(messageElement);
-                    this.scrollToBottom(false); // Scroll immediately, not smoothly
+                    this.scrollToBottom(false);
                     return messageElement;
                 },
 
@@ -430,80 +419,64 @@
                     this.setFormState(true);
                     this.isBotTyping = true;
                 
-                    const rawHtml = marked.parse(markdownText);
-                    
                     const messageElement = document.createElement('div');
-                    messageElement.classList.add('message', 'bot-message');
-                    const contentWrapper = document.createElement('div');
-                    contentWrapper.classList.add('bot-message-content');
-                    messageElement.appendChild(contentWrapper);
+                    messageElement.className = 'message bot-message';
                     
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = rawHtml;
-                
-                    const actions = [];
-                    const buildActionList = (node) => {
-                        if (node.nodeType === 1) { // Element node
-                            actions.push({ type: 'open', tag: node.nodeName });
-                            Array.from(node.childNodes).forEach(buildActionList);
-                            actions.push({ type: 'close', tag: node.nodeName });
-                        } else if (node.nodeType === 3) { // Text node
-                            actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
-                        }
-                    }
-                    Array.from(tempDiv.childNodes).forEach(buildActionList);
+                    const contentWrapper = document.createElement('div');
+                    contentWrapper.className = 'bot-message-content';
+                    contentWrapper.innerHTML = marked.parse(markdownText);
+                    messageElement.appendChild(contentWrapper);
+
+                    // --- Animation Preparation ---
+                    const charDelay = 10; // ms delay between each character
+                    const totalChars = this.prepareAnimation(contentWrapper, charDelay);
                     
                     this.elements.chatBox.appendChild(messageElement);
-                    
-                    let charCount = 0;
-                    let currentParent = contentWrapper;
-                    let parentStack = [contentWrapper];
-                
-                    if (this.rendererInterval) clearInterval(this.rendererInterval);
+                    this.scrollToBottom(false);
 
-                    this.rendererInterval = setInterval(() => {
-                        if (actions.length === 0) {
-                            clearInterval(this.rendererInterval);
-                            this.rendererInterval = null;
-                            this.addCodeCopyButtons(messageElement);
-                            this.setFormState(false);
-                            this.isBotTyping = false;
-                            this.handleScroll(); // Check if scroll button should be shown
-                            return;
-                        }
-                        
-                        if (charCount === 0) {
-                            messageElement.classList.add('visible');
-                        }
+                    // Trigger the animation by adding the 'visible' class
+                    requestAnimationFrame(() => {
+                        messageElement.classList.add('visible');
+                    });
                 
-                        const action = actions.shift();
-                
-                        if (action.type === 'open') {
-                            const newElement = document.createElement(action.tag);
-                            currentParent.appendChild(newElement);
-                            parentStack.push(newElement);
-                            currentParent = newElement;
-                        } else if (action.type === 'close') {
-                            parentStack.pop();
-                            currentParent = parentStack[parentStack.length - 1];
-                        } else if (action.type === 'char') {
-                            const span = document.createElement('span');
-                            span.className = 'char';
-                            span.textContent = action.content;
-                            currentParent.appendChild(span);
-                            requestAnimationFrame(() => {
-                                span.classList.add('visible');
-                            });
-                            charCount++;
-                        }
-                
-                        if (!this.isUserScrolledUp) {
-                             this.scrollToBottom(false);
-                        }
-                       
-                    }, 12); // Interval for live expansion
+                    // Set a single timeout for when the animation is complete
+                    const animationDuration = totalChars * charDelay + 500; // Add a buffer
+                    setTimeout(() => {
+                        this.addCodeCopyButtons(messageElement);
+                        this.setFormState(false);
+                        this.isBotTyping = false;
+                        this.handleScroll(); // Re-evaluate scroll state after animation
+                    }, animationDuration);
                 },
                 
+                prepareAnimation(container, delay) {
+                    let charIndex = 0;
+                    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+                    let node;
+                    const textNodes = [];
+                    while(node = walker.nextNode()) {
+                        textNodes.push(node);
+                    }
+                    
+                    textNodes.forEach(textNode => {
+                        const text = textNode.nodeValue;
+                        if (!text.trim()) return;
+
+                        const fragment = document.createDocumentFragment();
+                        for (const char of text) {
+                            const span = document.createElement('span');
+                            span.className = 'char';
+                            span.textContent = char;
+                            // Assign the staggered delay directly to the element
+                            span.style.transitionDelay = `${charIndex * delay}ms`;
+                            fragment.appendChild(span);
+                            charIndex++;
+                        }
+                        textNode.parentNode.replaceChild(fragment, textNode);
+                    });
+                    return charIndex; // Return total characters for timeout calculation
+                },
+
                 addCodeCopyButtons(messageElement) {
                     messageElement.querySelectorAll('pre').forEach(pre => {
                         const code = pre.querySelector('code');
@@ -511,7 +484,6 @@
                         const copyButton = document.createElement('button');
                         copyButton.className = 'copy-btn';
                         copyButton.textContent = 'Copy';
-                        copyButton.setAttribute('aria-label', 'Copy code snippet');
                         copyButton.onclick = () => {
                             navigator.clipboard.writeText(code.textContent).then(() => {
                                 copyButton.textContent = 'Copied!';
@@ -529,8 +501,10 @@
                 toggleTypingIndicator(show) {
                     if (show) {
                         if (this.typingIndicatorRef) return;
-                        this.typingIndicatorRef = this.addMessage('', 'typing-indicator-bubble');
+                        this.typingIndicatorRef = document.createElement('div');
+                        this.typingIndicatorRef.className = 'message typing-indicator-bubble';
                         this.typingIndicatorRef.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+                        this.elements.chatBox.appendChild(this.typingIndicatorRef);
                     } else {
                         if (!this.typingIndicatorRef) return;
                         this.typingIndicatorRef.remove();
@@ -539,7 +513,6 @@
                     this.scrollToBottom(false);
                 },
 
-                // --- FORM & USER INPUT ---
                 async handleFormSubmit(e) {
                     e.preventDefault();
                     const userText = this.elements.userInput.value.trim();
@@ -558,7 +531,6 @@
                         } catch (error) {
                             this.toggleTypingIndicator(false);
                             this.addBotMessage("My apologies, but I've encountered a network error. Please try again shortly.");
-                            this.setFormState(false);
                         }
                     }
                 },
@@ -569,7 +541,6 @@
                     if (!disabled) this.elements.userInput.focus();
                 },
                 
-                // --- API & DATA ---
                 updateHistory(role, text) {
                     this.conversationHistory.push({ role, parts: [{ text }] });
                 },
@@ -586,12 +557,11 @@
                         return data.candidates[0].content.parts[0].text;
                     } catch (error) {
                         console.error("Failed to get bot response:", error);
-                        this.conversationHistory.pop(); // Remove user message from history on failure
+                        this.conversationHistory.pop();
                         throw error;
                     }
                 },
                 
-                // --- SCROLL HANDLING ---
                 handleScroll() {
                     const el = this.elements.chatBox;
                     const atBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + 20;
