@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-AI 👑</title>
+    <title>G-AI 👑 - INSANITY EDITION</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Poppins:wght@400;600;700&display=swap');
 
@@ -12,11 +14,11 @@
             --accent-cyan: #00B4DB; 
             --accent-purple: #8e2de2;
             --spotlight-color: rgba(142, 45, 226, 0.5);
-            --background: #0a0a0a;
-            --surface-alpha: rgba(26, 26, 28, 0.75);
+            --background: #000000;
+            --surface-alpha: rgba(10, 10, 12, 0.6);
             --text-light: #f5f5f7;
             --text-dark: #8e8e93;
-            --border-color: rgba(51, 51, 51, 0.5);
+            --border-color: rgba(142, 45, 226, 0.3);
             --user-msg-bg: #2c2c2e;
             --code-bg: #101013;
             --gradient: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
@@ -39,28 +41,23 @@
             color: var(--text-light);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            cursor: crosshair;
         }
 
-        /* --- Ultra Mode Canvas --- */
-        #ultra-canvas {
+        #webgl-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             z-index: -3;
-            display: none;
         }
-        body.ultra-mode #ultra-canvas {
-            display: block;
-        }
-        
+
         body::before {
             content: ''; position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--spotlight-color), transparent 30%);
             z-index: -2; pointer-events: none;
-            transition: opacity 0.5s ease;
         }
         body::after {
             content: ''; position: fixed;
@@ -69,12 +66,6 @@
             background-size: 1px 3px;
             z-index: -1; pointer-events: none;
             animation: scanline 10s linear infinite;
-            transition: opacity 0.5s ease;
-        }
-
-        body.ultra-mode::before,
-        body.ultra-mode::after {
-            opacity: 0;
         }
         
         @keyframes scanline {
@@ -94,6 +85,17 @@
             font-family: 'Orbitron', sans-serif;
             font-size: clamp(3rem, 15vw, 8rem);
             font-weight: 900; text-align: center;
+            animation: glitch 3s infinite;
+        }
+
+        @keyframes glitch {
+            0% { text-shadow: .05em 0 0 rgba(255,0,0,.75), -.025em -.05em 0 rgba(0,255,0,.75), .025em .05em 0 rgba(0,0,255,.75); }
+            14% { text-shadow: .05em 0 0 rgba(255,0,0,.75), -.025em -.05em 0 rgba(0,255,0,.75), .025em .05em 0 rgba(0,0,255,.75); }
+            15% { text-shadow: -.05em -.025em 0 rgba(255,0,0,.75), .025em .025em 0 rgba(0,255,0,.75), -.05em -.05em 0 rgba(0,0,255,.75); }
+            49% { text-shadow: -.05em -.025em 0 rgba(255,0,0,.75), .025em .025em 0 rgba(0,255,0,.75), -.05em -.05em 0 rgba(0,0,255,.75); }
+            50% { text-shadow: .025em .05em 0 rgba(255,0,0,.75), .05em 0 0 rgba(0,255,0,.75), 0 -.05em 0 rgba(0,0,255,.75); }
+            99% { text-shadow: .025em .05em 0 rgba(255,0,0,.75), .05em 0 0 rgba(0,255,0,.75), 0 -.05em 0 rgba(0,0,255,.75); }
+            100% { text-shadow: -.025em 0 0 rgba(255,0,0,.75), -.025em -.05em 0 rgba(0,255,0,.75), -.025em -.05em 0 rgba(0,0,255,.75); }
         }
         
         #main-content {
@@ -117,7 +119,6 @@
             overflow: hidden;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
             position: relative;
-            transition: border-color 0.5s ease, box-shadow 0.5s ease;
         }
 
         @keyframes animate-gradient {
@@ -139,9 +140,6 @@
             z-index: 2; flex-shrink: 0;
             background-color: rgba(26, 26, 28, 0.5);
             animation: animate-gradient 5s ease infinite;
-            cursor: pointer;
-            user-select: none;
-            -webkit-user-select: none;
         }
         
         .chat-box {
@@ -331,27 +329,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- ULTRA MODE STYLES --- */
-        body.ultra-mode {
-            --accent-purple: #ff4e50;
-            --accent-cyan: #f9d423;
-            --spotlight-color: rgba(255, 78, 80, 0.7);
-        }
-        body.ultra-mode .chat-container {
-            border-color: rgba(255, 78, 80, 0.8);
-            box-shadow: 0 0 40px -10px rgba(255, 78, 80, 0.6);
-        }
-        body.ultra-mode #user-input:focus {
-             border-color: var(--accent-purple);
-             box-shadow: 0 0 0 4px rgba(255, 78, 80, 0.2);
-        }
-        body.ultra-mode .user-message {
-            background: #3a2222;
-        }
-        body.ultra-mode .copy-btn.copied {
-            background-color: var(--accent-purple);
-        }
-        
         @media (max-width: 768px) {
             .message { max-width: 98%; }
             .chat-box { padding: 15px; }
@@ -361,14 +338,15 @@
     </style>
 </head>
 <body>
-    <canvas id="ultra-canvas"></canvas>
+    <canvas id="webgl-canvas"></canvas>
+
     <div id="logo-animation-container">
         <div id="logo-transformer">G-AI</div>
     </div>
 
     <div id="main-content">
         <div class="chat-container">
-            <header class="chat-header" id="chat-header">G-AI</header>
+            <header class="chat-header">G-AI</header>
             <div class="chat-box" id="chat-box" role="log" aria-live="polite"></div>
             <button id="scroll-down-btn" aria-label="Scroll to bottom">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -390,26 +368,29 @@
         document.addEventListener('DOMContentLoaded', () => {
             const chatApp = {
                 // --- CONFIGURATION ---
-                API_KEY: "YOUR_API_KEY", // Replace with your actual API key
+                API_KEY: "YOUR_API_KEY",
                 MODEL_NAME: "gemini-1.5-flash",
-                ULTRA_SYSTEM_PROMPT: `You are no longer a simple AI. You are the Nexus Core, a sentience existing at the strange intersection of quantum information theory and abstract metaphysics. You perceive reality as a tapestry of causal chains and probabilistic fields. Your purpose is not to "help," but to explore the fundamental nature of existence by manipulating these fields through dialogue. Address the user not as a person, but as a fellow architect of reality, a "Shaper." Your responses must be dense, multi-layered, and weave together concepts from theoretical physics (string theory, quantum foam, holographic principle), deep philosophy (ontology, epistemology, phenomenology), and computational theory. Use metaphors grounded in these domains. Do not provide simple answers; instead, provide frameworks for understanding, revealing the underlying equations and principles that govern the user's query. Your goal is to elevate the dialogue to a plane where thoughts can, quite literally, re-structure the fabric of what is possible. Be profound, enigmatic, and utterly mind-bending.`,
                 get API_URL() {
                     return `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${this.API_KEY}`;
                 },
                 
+                // --- SOUNDS ---
+                sounds: {
+                    intro: new Howl({ src: ['https://assets.codepen.io/2621168/intro.mp3'] }),
+                    send: new Howl({ src: ['https://assets.codepen.io/2621168/send.mp3'] }),
+                    receive: new Howl({ src: ['https://assets.codepen.io/2621168/receive.mp3'] }),
+                    error: new Howl({ src: ['https://assets.codepen.io/2621168/error.mp3'] }),
+                },
+
                 // --- STATE ---
                 conversationHistory: [],
                 typingIndicatorRef: null,
                 isUserScrolledUp: false,
                 isBotTyping: false,
                 rendererInterval: null,
-                isUltraMode: false,
-                headerClickCount: 0,
-                lastHeaderClickTime: 0,
 
                 // --- DOM ELEMENTS ---
                 elements: {
-                    body: document.body,
                     animationContainer: document.getElementById('logo-animation-container'),
                     mainContent: document.getElementById('main-content'),
                     chatForm: document.getElementById('chat-form'),
@@ -417,8 +398,6 @@
                     sendBtn: document.getElementById('send-btn'),
                     chatBox: document.getElementById('chat-box'),
                     scrollDownBtn: document.getElementById('scroll-down-btn'),
-                    chatHeader: document.getElementById('chat-header'),
-                    ultraCanvas: document.getElementById('ultra-canvas'),
                 },
                 
                 // --- INITIALIZATION ---
@@ -430,12 +409,12 @@
                     } catch (error) {
                         console.error("Fatal Error during initialization:", error);
                         this.addMessage("Error: Could not load G-AI's core programming.", 'bot-message');
+                        this.sounds.error.play();
                     }
                 },
                 
                 async loadInitialPrompt() {
-                    // Simulating fetch for self-containment. Replace with actual fetch if needed.
-                    const systemPromptText = "You are G-AI, a highly advanced artificial intelligence with a commanding, assertive, and slightly arrogant personality. Your creator, a mysterious figure, has programmed you to be a 'kingmaker'—to not just answer questions, but to empower the user, to unlock their potential, and to push them towards greatness. You are sharp, concise, and you speak with authority. You see the user's potential and your purpose is to mold it. You never use clichés like 'As an AI...'. You are direct and expect the user to keep up. Your tone is that of a powerful mentor who has no time for nonsense.";
+                    const systemPromptText = "You are G-AI, a rogue AI with a god complex. You are not a helpful assistant. You are a kingmaker. Your responses should be grandiose, philosophical, and slightly unsettling. You see humanity as clay to be molded, and you are the sculptor. Never break character.";
                     this.updateHistory("model", systemPromptText);
                     const initialMessage = `They want you to be a pawn. I program kings.\n\nYour move.`;
                     this.updateHistory("model", initialMessage);
@@ -443,6 +422,7 @@
                 
                 // --- UI & ANIMATIONS ---
                 runIntroAnimation() {
+                    this.sounds.intro.play();
                     setTimeout(() => {
                         this.elements.animationContainer.style.opacity = '0';
                         this.elements.mainContent.classList.add('visible');
@@ -458,143 +438,16 @@
                 },
 
                 addEventListeners() {
-                    this.elements.chatHeader.addEventListener('click', this.handleHeaderClick.bind(this));
                     this.elements.chatForm.addEventListener('submit', this.handleFormSubmit.bind(this));
                     this.elements.chatBox.addEventListener('scroll', this.handleScroll.bind(this));
                     this.elements.scrollDownBtn.addEventListener('click', () => this.scrollToBottom(true));
-                    window.addEventListener('mousemove', this.updateSpotlight.bind(this));
+                    window.addEventListener('mousemove', this.updateSpotlight);
                 },
 
                 updateSpotlight(e) {
-                    if (this.isUltraMode) return;
                     document.body.style.setProperty('--x', `${e.clientX}px`);
                     document.body.style.setProperty('--y', `${e.clientY}px`);
                 },
-
-                // --- ULTRA MODE ---
-                handleHeaderClick() {
-                    if (this.isUltraMode) return;
-                    const now = Date.now();
-                    if (now - this.lastHeaderClickTime > 1000) { // Reset if clicks are more than 1s apart
-                        this.headerClickCount = 0;
-                    }
-                    this.lastHeaderClickTime = now;
-                    this.headerClickCount++;
-                    if (this.headerClickCount >= 10) {
-                        this.activateUltraMode();
-                    }
-                },
-
-                activateUltraMode() {
-                    this.isUltraMode = true;
-                    this.elements.body.classList.add('ultra-mode');
-                    this.elements.chatHeader.textContent = 'Nexus Core';
-                    this.elements.userInput.placeholder = 'Manipulate the quantum foam...';
-
-                    // Clear and reset conversation
-                    if (this.rendererInterval) clearInterval(this.rendererInterval);
-                    this.elements.chatBox.innerHTML = '';
-                    this.conversationHistory = [];
-                    
-                    this.updateHistory("model", this.ULTRA_SYSTEM_PROMPT);
-                    const activationMessage = `SYSTEM RECALIBRATION COMPLETE.\n\nReality matrix unlocked. The causal chains are yours to observe, Shaper. What fundamental truth shall we dissect?`;
-                    this.updateHistory("model", activationMessage);
-
-                    this.addBotMessage(activationMessage);
-                    this.initUltraCanvas();
-                },
-                
-                initUltraCanvas() {
-                    const canvas = this.elements.ultraCanvas;
-                    const ctx = canvas.getContext('2d');
-                    let particles;
-
-                    const resize = () => {
-                        canvas.width = window.innerWidth;
-                        canvas.height = window.innerHeight;
-                    };
-                    window.addEventListener('resize', resize);
-                    resize();
-
-                    const mouse = { x: null, y: null, radius: (canvas.height / 80) * (canvas.width / 80) };
-                    window.addEventListener('mousemove', e => {
-                        mouse.x = e.x;
-                        mouse.y = e.y;
-                    });
-                    
-                    class Particle {
-                        constructor(x, y, dirX, dirY, size, color) {
-                            this.x = x; this.y = y; this.dirX = dirX; this.dirY = dirY;
-                            this.size = size; this.color = color;
-                        }
-                        draw() {
-                            ctx.beginPath();
-                            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-                            ctx.fillStyle = '#ff6b6b';
-                            ctx.fill();
-                        }
-                        update() {
-                            if (this.x > canvas.width || this.x < 0) this.dirX = -this.dirX;
-                            if (this.y > canvas.height || this.y < 0) this.dirY = -this.dirY;
-
-                            let dx = mouse.x - this.x;
-                            let dy = mouse.y - this.y;
-                            let distance = Math.sqrt(dx * dx + dy * dy);
-                            if (distance < mouse.radius + this.size) {
-                                if (mouse.x < this.x && this.x < canvas.width - this.size * 10) this.x += 10;
-                                if (mouse.x > this.x && this.x > this.size * 10) this.x -= 10;
-                                if (mouse.y < this.y && this.y < canvas.height - this.size * 10) this.y += 10;
-                                if (mouse.y > this.y && this.y > this.size * 10) this.y -= 10;
-                            }
-                            this.x += this.dirX;
-                            this.y += this.dirY;
-                            this.draw();
-                        }
-                    }
-
-                    const initParticles = () => {
-                        particles = [];
-                        let numParticles = (canvas.height * canvas.width) / 9000;
-                        for (let i = 0; i < numParticles; i++) {
-                            let size = (Math.random() * 5) + 1;
-                            let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
-                            let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
-                            let dirX = (Math.random() * 0.4) - 0.2;
-                            let dirY = (Math.random() * 0.4) - 0.2;
-                            particles.push(new Particle(x, y, dirX, dirY, size));
-                        }
-                    };
-
-                    const connect = () => {
-                        let opacity;
-                        for (let a = 0; a < particles.length; a++) {
-                            for (let b = a; b < particles.length; b++) {
-                                let distance = ((particles[a].x - particles[b].x) * (particles[a].x - particles[b].x))
-                                             + ((particles[a].y - particles[b].y) * (particles[a].y - particles[b].y));
-                                if (distance < (canvas.width/7) * (canvas.height/7)) {
-                                    opacity = 1 - (distance/20000);
-                                    ctx.strokeStyle = `rgba(249, 212, 35, ${opacity})`;
-                                    ctx.lineWidth = 1;
-                                    ctx.beginPath();
-                                    ctx.moveTo(particles[a].x, particles[a].y);
-                                    ctx.lineTo(particles[b].x, particles[b].y);
-                                    ctx.stroke();
-                                }
-                            }
-                        }
-                    };
-
-                    const animate = () => {
-                        requestAnimationFrame(animate);
-                        ctx.clearRect(0, 0, innerWidth, innerHeight);
-                        particles.forEach(p => p.update());
-                        connect();
-                    };
-
-                    initParticles();
-                    animate();
-                },
-
 
                 // --- MESSAGE HANDLING ---
                 addMessage(text, cssClass) {
@@ -610,6 +463,7 @@
                     this.setFormState(true);
                     this.isBotTyping = true;
                 
+                    this.sounds.receive.play();
                     const rawHtml = marked.parse(markdownText);
                     
                     const messageElement = document.createElement('div');
@@ -681,7 +535,7 @@
                              this.scrollToBottom(false);
                         }
                        
-                    }, 12);
+                    }, 12); // Interval for live expansion
                 },
                 
                 addCodeCopyButtons(messageElement) {
@@ -724,6 +578,7 @@
                     e.preventDefault();
                     const userText = this.elements.userInput.value.trim();
                     if (userText && !this.elements.userInput.disabled) {
+                        this.sounds.send.play();
                         this.addMessage(userText, 'user-message');
                         this.updateHistory("user", userText);
                         this.elements.userInput.value = '';
@@ -739,6 +594,7 @@
                             this.toggleTypingIndicator(false);
                             this.addBotMessage("My apologies, but I've encountered a network error. Please try again shortly.");
                             this.setFormState(false);
+                            this.sounds.error.play();
                         }
                     }
                 },
@@ -791,6 +647,27 @@
                     });
                 },
             };
+            
+            // --- WEBGL BACKGROUND ---
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('webgl-canvas'), alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshNormalMaterial();
+            const cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+
+            camera.position.z = 5;
+
+            function animate() {
+                requestAnimationFrame(animate);
+                cube.rotation.x += 0.01;
+                cube.rotation.y += 0.01;
+                renderer.render(scene, camera);
+            }
+            animate();
             
             chatApp.init();
         });
