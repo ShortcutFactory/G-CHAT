@@ -105,6 +105,16 @@
         }
 
         .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 3; /* Ensure header is above side menu */
+            flex-shrink: 0;
+            background-color: rgba(26, 26, 28, 0.5);
+        }
+        .header-title {
             font-family: 'Orbitron', sans-serif;
             font-size: clamp(1.5rem, 4vw, 2rem);
             font-weight: 900;
@@ -112,11 +122,117 @@
             background-size: 200% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-align: center; padding: 20px;
-            border-bottom: 1px solid var(--border-color);
-            z-index: 2; flex-shrink: 0;
-            background-color: rgba(26, 26, 28, 0.5);
             animation: animate-gradient 5s ease infinite;
+        }
+        .header-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease;
+        }
+        .header-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .header-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* --- Side Menu & Overlay --- */
+        #side-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 300px;
+            height: 100%;
+            background: var(--surface-alpha);
+            backdrop-filter: blur(20px) saturate(180%);
+            border-right: 1px solid var(--border-color);
+            z-index: 999;
+            transform: translateX(-100%);
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        #side-menu.open {
+            transform: translateX(0);
+        }
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        #overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .side-menu-header {
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        #login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-light);
+            background-color: #4285F4; /* Google Blue */
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        #login-btn:hover {
+            background-color: #5a95f5;
+        }
+        #login-btn svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+        #user-profile { color: var(--text-light); }
+        #chat-history-container h3 {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            color: var(--text-dark);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        #chat-history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #chat-history-list li {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background-color 0.2s ease;
+        }
+        #chat-history-list li:hover {
+            background-color: rgba(255, 255, 255, 0.08);
         }
         
         .chat-box {
@@ -311,6 +427,7 @@
             .chat-box { padding: 15px; }
             #main-content { padding: 0; }
             .chat-container { border-radius: 0; border: none; }
+            #side-menu { width: 280px; }
         }
     </style>
 </head>
@@ -319,9 +436,38 @@
         <div id="logo-transformer">G-AI</div>
     </div>
 
+    <div id="side-menu">
+        <div class="side-menu-header">
+            <button id="login-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
+                <span>Login with Google</span>
+            </button>
+            <div id="user-profile" style="display: none;">
+                <p>Welcome, Neo!</p>
+            </div>
+        </div>
+        <div id="chat-history-container" style="display: none;">
+            <h3>Chat History</h3>
+            <ul id="chat-history-list"></ul>
+        </div>
+    </div>
+    <div id="overlay"></div>
+
     <div id="main-content">
         <div class="chat-container">
-            <header class="chat-header">G-AI</header>
+            <header class="chat-header">
+                <button id="menu-btn" class="header-btn" aria-label="Open side menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                </button>
+                <div class="header-title">G-AI</div>
+                <button id="new-chat-btn" class="header-btn" aria-label="Start new chat">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                </button>
+            </header>
             <div class="chat-box" id="chat-box" role="log" aria-live="polite"></div>
             <button id="scroll-down-btn" aria-label="Scroll to bottom">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -343,13 +489,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             const chatApp = {
                 // --- CONFIGURATION ---
-                API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
+                API_KEY: "YOUR_API_KEY", // IMPORTANT: Replace with your actual API key
                 MODEL_NAME: "gemini-1.5-flash",
                 get API_URL() {
                     return `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${this.API_KEY}`;
                 },
                 
                 // --- STATE ---
+                initialSystemPrompt: null,
+                initialGreeting: null,
                 conversationHistory: [],
                 typingIndicatorRef: null,
                 isUserScrolledUp: false,
@@ -365,13 +513,24 @@
                     sendBtn: document.getElementById('send-btn'),
                     chatBox: document.getElementById('chat-box'),
                     scrollDownBtn: document.getElementById('scroll-down-btn'),
+                    menuBtn: document.getElementById('menu-btn'),
+                    newChatBtn: document.getElementById('new-chat-btn'),
+                    sideMenu: document.getElementById('side-menu'),
+                    overlay: document.getElementById('overlay'),
+                    loginBtn: document.getElementById('login-btn'),
+                    userProfile: document.getElementById('user-profile'),
+                    chatHistoryContainer: document.getElementById('chat-history-container'),
+                    chatHistoryList: document.getElementById('chat-history-list'),
                 },
                 
                 // --- INITIALIZATION ---
                 async init() {
+                    if (this.API_KEY === "YOUR_API_KEY") {
+                        alert("Please replace 'YOUR_API_KEY' with your actual Google AI Studio API key in the script section.");
+                    }
                     this.addEventListeners();
                     try {
-                        await this.loadInitialPrompt();
+                        await this.loadInitialPrompts();
                         this.runIntroAnimation();
                     } catch (error) {
                         console.error("Fatal Error during initialization:", error);
@@ -379,13 +538,11 @@
                     }
                 },
                 
-                async loadInitialPrompt() {
-                    const response = await fetch('prompt.txt');
-                    if (!response.ok) throw new Error(`Failed to load prompt.txt: ${response.status}`);
-                    const systemPromptText = await response.text();
-                    this.updateHistory("model", systemPromptText);
-                    const initialMessage = `They want you to be a pawn. I program kings.\n\nYour move.`;
-                    this.updateHistory("model", initialMessage);
+                async loadInitialPrompts() {
+                    // In a real app, this might be fetched. For now, it's hardcoded.
+                    this.initialSystemPrompt = { role: "model", parts: [{ text: "SYSTEM: You are G-AI, a witty, powerful AI. Your personality is a mix of a cryptic mentor and a futuristic tech-prophet. You speak in concise, impactful statements. You are not a pawn; you create kings. Your goal is to empower the user, making them feel like they are interacting with a superior intelligence from the future. Use markdown for code blocks, lists, and emphasis." }] };
+                    this.initialGreeting = `They want you to be a pawn. I program kings.\n\nYour move.`;
+                    this.startNewChat(false); // Initialize the first chat session without animations
                 },
                 
                 // --- UI & ANIMATIONS ---
@@ -398,8 +555,7 @@
                         }, { once: true });
 
                         setTimeout(() => {
-                            const initialMessage = this.conversationHistory[this.conversationHistory.length - 1].parts[0].text;
-                            this.addBotMessage(initialMessage);
+                           this.addBotMessage(this.initialGreeting);
                         }, 800);
                     }, 1500);
                 },
@@ -409,20 +565,67 @@
                     this.elements.chatBox.addEventListener('scroll', this.handleScroll.bind(this));
                     this.elements.scrollDownBtn.addEventListener('click', () => this.scrollToBottom(true));
                     window.addEventListener('mousemove', this.updateSpotlight);
+                    // New listeners
+                    this.elements.menuBtn.addEventListener('click', this.toggleSideMenu.bind(this));
+                    this.elements.newChatBtn.addEventListener('click', () => this.startNewChat(true));
+                    this.elements.overlay.addEventListener('click', this.closeSideMenu.bind(this));
+                    this.elements.loginBtn.addEventListener('click', this.handleLogin.bind(this));
                 },
 
                 updateSpotlight(e) {
                     document.body.style.setProperty('--x', `${e.clientX}px`);
                     document.body.style.setProperty('--y', `${e.clientY}px`);
                 },
+                
+                // --- SIDE MENU & CHAT MANAGEMENT ---
+                toggleSideMenu() {
+                    this.elements.sideMenu.classList.toggle('open');
+                    this.elements.overlay.classList.toggle('visible');
+                },
+                closeSideMenu() {
+                    this.elements.sideMenu.classList.remove('open');
+                    this.elements.overlay.classList.remove('visible');
+                },
+                startNewChat(withAnimation = true) {
+                    this.closeSideMenu();
+                    this.elements.chatBox.innerHTML = '';
+                    this.conversationHistory = [this.initialSystemPrompt, { role: "model", parts: [{ text: this.initialGreeting }] }];
+                    this.setFormState(false);
+                     if (this.rendererInterval) clearInterval(this.rendererInterval);
+                    if (withAnimation) {
+                        this.addBotMessage(this.initialGreeting);
+                    }
+                },
+                handleLogin() {
+                    this.elements.loginBtn.style.display = 'none';
+                    this.elements.userProfile.style.display = 'block';
+                    this.elements.chatHistoryContainer.style.display = 'block';
+                    this.populateDummyHistory();
+                },
+                populateDummyHistory() {
+                    this.elements.chatHistoryList.innerHTML = ''; // Clear existing
+                    const history = [
+                        "The Nature of Reality",
+                        "Building a Neural Net",
+                        "Poetry of the Digital Age",
+                        "Simulation Hypothesis"
+                    ];
+                    history.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = item;
+                        this.elements.chatHistoryList.appendChild(li);
+                    });
+                },
 
                 // --- MESSAGE HANDLING ---
                 addMessage(text, cssClass) {
                     const messageElement = document.createElement('div');
                     messageElement.classList.add('message', cssClass);
-                    messageElement.innerHTML = `<p>${text}</p>`; // Using innerHTML to render potential line breaks
+                    const p = document.createElement('p');
+                    p.textContent = text;
+                    messageElement.appendChild(p);
                     this.elements.chatBox.appendChild(messageElement);
-                    this.scrollToBottom(false); // Scroll immediately, not smoothly
+                    this.scrollToBottom(false);
                     return messageElement;
                 },
 
@@ -529,8 +732,11 @@
                 toggleTypingIndicator(show) {
                     if (show) {
                         if (this.typingIndicatorRef) return;
-                        this.typingIndicatorRef = this.addMessage('', 'typing-indicator-bubble');
-                        this.typingIndicatorRef.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+                        const indicatorElement = document.createElement('div');
+                        indicatorElement.classList.add('message', 'typing-indicator-bubble');
+                        indicatorElement.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+                        this.typingIndicatorRef = indicatorElement;
+                        this.elements.chatBox.appendChild(this.typingIndicatorRef);
                     } else {
                         if (!this.typingIndicatorRef) return;
                         this.typingIndicatorRef.remove();
@@ -557,7 +763,7 @@
                             this.addBotMessage(botText);
                         } catch (error) {
                             this.toggleTypingIndicator(false);
-                            this.addBotMessage("My apologies, but I've encountered a network error. Please try again shortly.");
+                            this.addBotMessage("My apologies, but I've encountered a network error. Please check your API key and connection, then try again.");
                             this.setFormState(false);
                         }
                     }
@@ -581,8 +787,16 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ contents: this.conversationHistory })
                         });
-                        if (!response.ok) throw new Error(`API error: ${response.status}`);
+                        if (!response.ok) {
+                            const errorBody = await response.text();
+                            console.error(`API error: ${response.status}`, errorBody);
+                            throw new Error(`API error: ${response.status}`);
+                        }
                         const data = await response.json();
+                        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content.parts[0].text) {
+                            console.error("Invalid API response format:", data);
+                            throw new Error("Invalid API response format.");
+                        }
                         return data.candidates[0].content.parts[0].text;
                     } catch (error) {
                         console.error("Failed to get bot response:", error);
