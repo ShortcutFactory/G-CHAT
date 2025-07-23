@@ -43,6 +43,29 @@
         }
         #logo-transformer { font-family: 'Orbitron', sans-serif; font-size: clamp(3rem, 15vw, 8rem); }
         
+        /* --- BETA BANNER --- */
+        #beta-banner {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translate(-50%, -150%);
+            background: var(--gradient);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            z-index: 1001;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.5s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            white-space: nowrap;
+        }
+        #beta-banner.visible {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+        /* --- END BETA BANNER --- */
+
         #main-content {
             opacity: 0; transition: opacity 1.2s ease-in;
             position: relative; z-index: 1; height: 100%; width: 100%;
@@ -174,10 +197,13 @@
             .chat-wrapper, .chat-container { border-radius: 0; }
             #main-content { padding: 0; }
             #side-menu { width: 280px; }
+            #beta-banner { text-align: center; width: 90%; }
         }
     </style>
 </head>
 <body>
+    <div id="beta-banner">G-AI is still in beta. Some features may not work as intended.</div>
+
     <div id="g_id_onload" 
          data-client_id="867344501671-f8i2n6hvtm2321tf5kdfu0oqvmghiih7.apps.googleusercontent.com"
          data-callback="handleCredentialResponse"
@@ -243,8 +269,8 @@
         }
 
         const chatApp = {
-            API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
-            MODEL_NAME: "gemini-2.5-flash", // Corrected Model Name
+            API_KEY: "YOUR_API_KEY_HERE", // IMPORTANT: Replace with your actual API key
+            MODEL_NAME: "gemini-1.5-flash",
             
             initialSystemPromptText: "SYSTEM: You are G-AI. Your personality is a mix of a cryptic mentor and a futuristic tech-prophet.",
             userInfo: null,
@@ -260,6 +286,7 @@
             async init() {
                 this.cacheDOMElements();
                 this.addEventListeners();
+                this.showBetaBanner(); // Show the beta banner
                 await this.loadCorePrompt();
                 const storedUser = localStorage.getItem('g-ai-user');
                 if (storedUser) {
@@ -268,6 +295,23 @@
                     this.startNewChat(false);
                 }
                 this.runIntroAnimation();
+            },
+            
+            showBetaBanner() {
+                const banner = this.elements.betaBanner;
+                if (!banner) return;
+                
+                // Show banner after the main content starts fading in
+                setTimeout(() => {
+                    banner.classList.add('visible');
+                }, 2000); 
+
+                // Hide banner after 7 seconds total (2s delay + 5s visible)
+                setTimeout(() => {
+                    banner.classList.remove('visible');
+                    // Optional: remove from DOM after transition
+                    banner.addEventListener('transitionend', () => banner.remove(), { once: true });
+                }, 7000);
             },
 
             async loadCorePrompt() {
@@ -300,6 +344,7 @@
                     logoutBtn: document.getElementById('logout-btn'),
                     chatHistoryContainer: document.getElementById('chat-history-container'),
                     chatHistoryList: document.getElementById('chat-history-list'),
+                    betaBanner: document.getElementById('beta-banner'), // Cache banner element
                 };
             },
 
@@ -309,10 +354,8 @@
                     this.elements.mainContent.classList.add('visible');
                     this.elements.animationContainer.addEventListener('transitionend', () => this.elements.animationContainer.style.display = 'none', { once: true });
                     setTimeout(() => {
-                        // Only render the first message if the chatbox is empty.
-                        // This prevents the duplicate message on first load.
                         if (this.elements.chatBox.children.length === 0 && this.conversationHistory.length > 1) {
-                           this.addBotMessage(this.conversationHistory[1].parts[0].text);
+                           this.addBotMessage(this.conversationHistory[1].parts[0].text, true);
                         }
                     }, 800);
                 }, 1500);
@@ -325,8 +368,10 @@
                 this.elements.menuBtn.addEventListener('click', this.toggleSideMenu.bind(this));
                 this.elements.newChatBtn.addEventListener('click', () => this.startNewChat(true));
                 this.elements.logoutBtn.addEventListener('click', this.handleLogout.bind(this));
-                this.elements.chatContainer.addEventListener('click', () => {
-                    if (this.isMenuOpen) this.closeSideMenu();
+                this.elements.chatContainer.addEventListener('click', (e) => {
+                    if (this.isMenuOpen && !this.elements.sideMenu.contains(e.target) && !this.elements.menuBtn.contains(e.target)) {
+                        this.closeSideMenu();
+                    }
                 });
             },
 
@@ -368,7 +413,7 @@
                 if (this.isBotTyping) clearInterval(this.rendererInterval);
                 this.currentChatId = `chat_${Date.now()}`;
                 this.conversationHistory = [
-                    { role: "model", parts: [{ text: this.initialSystemPromptText }] },
+                    { role: "user", parts: [{ text: this.initialSystemPromptText }] },
                     { role: "model", parts: [{ text: "They want you to be a pawn. I program kings.\n\nYour move." }] }
                 ];
                 this.elements.chatBox.innerHTML = '';
@@ -376,23 +421,12 @@
                     this.addBotMessage(this.conversationHistory[1].parts[0].text, true);
                 }
 
-                // *** HISTORY FIX ***
-                // Immediately save and render the new chat in the history list if logged in.
                 if (this.userInfo) {
                     const history = this.getStoredChats();
-                    // Prevent adding a duplicate "New Chat" if one already exists and is empty
-                    const existingEmptyChat = history.find(chat => chat.title === "New Chat" && chat.conversationHistory.length <= 2);
-                    if (!existingEmptyChat) {
-                        const newChatData = { id: this.currentChatId, title: "New Chat", conversationHistory: this.conversationHistory };
-                        history.unshift(newChatData);
-                        localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(history));
-                        this.renderChatHistory(history);
-                    } else {
-                        // If an empty "New Chat" exists, just make it the active one.
-                        this.currentChatId = existingEmptyChat.id;
-                        this.conversationHistory = existingEmptyChat.conversationHistory;
-                        this.renderChatHistory(history); // Re-render to set the 'active' class
-                    }
+                    const newChatData = { id: this.currentChatId, title: "New Chat", conversationHistory: this.conversationHistory };
+                    history.unshift(newChatData);
+                    localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(history));
+                    this.renderChatHistory(history);
                 }
                 this.updateHistoryUI();
                 this.closeSideMenu();
@@ -405,10 +439,11 @@
                     this.currentChatId = chatToLoad.id;
                     this.conversationHistory = chatToLoad.conversationHistory;
                     this.elements.chatBox.innerHTML = '';
+                    // Start from index 1 to skip the system prompt
                     this.conversationHistory.slice(1).forEach(msg => {
                         const text = msg.parts[0].text;
                         if (msg.role === 'model') this.addBotMessage(text, true);
-                        else this.addMessage(text, 'user-message');
+                        else if (msg.role === 'user') this.addMessage(text, 'user-message');
                     });
                     this.updateHistoryUI();
                     this.closeSideMenu();
@@ -421,20 +456,23 @@
             },
 
             saveCurrentChat() {
-                if (!this.userInfo || this.conversationHistory.length <= 2) return;
+                if (!this.userInfo || !this.currentChatId) return;
                 const history = this.getStoredChats();
                 const currentChatIndex = history.findIndex(c => c.id === this.currentChatId);
-                const firstUserMessage = this.conversationHistory.find(m => m.role === 'user')?.parts[0].text;
-                // Use a different title if there's user input
-                const title = firstUserMessage ? firstUserMessage.substring(0, 30) + '...' : 'New Chat';
-                const chatData = { id: this.currentChatId, title, conversationHistory: this.conversationHistory };
+                if (currentChatIndex === -1) return; // Should not happen if startNewChat is correct
 
-                if (currentChatIndex > -1) {
-                    history[currentChatIndex] = chatData;
-                } else {
-                    // This case should be rare now, but is a good fallback
-                    history.unshift(chatData);
-                }
+                // Determine title from the first user message (that isn't the system prompt)
+                const firstUserMessage = this.conversationHistory.find(m => m.role === 'user' && m.parts[0].text !== this.initialSystemPromptText);
+                const title = firstUserMessage ? firstUserMessage.parts[0].text.substring(0, 30) : 'New Chat';
+                
+                const chatData = { 
+                    id: this.currentChatId, 
+                    title: title + (firstUserMessage && firstUserMessage.parts[0].text.length > 30 ? '...' : ''), 
+                    conversationHistory: this.conversationHistory 
+                };
+
+                history[currentChatIndex] = chatData;
+                
                 localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(history));
                 this.renderChatHistory(history);
             },
@@ -475,20 +513,22 @@
                     this.updateHistory("user", userText);
                     this.elements.userInput.value = '';
                     this.setFormState(true);
+                    
+                    this.saveCurrentChat(); // Save chat to update title immediately
+                    
                     this.toggleTypingIndicator(true);
                     
                     try {
-                        // Save the chat immediately after user sends a message to update the title
-                        this.saveCurrentChat();
                         const botText = await this.getBotResponse();
                         this.updateHistory("model", botText);
+                        this.saveCurrentChat(); // Save again with bot's response
                         this.toggleTypingIndicator(false);
                         this.addBotMessage(botText);
-                        // Save again to include the bot's response
-                        this.saveCurrentChat(); 
                     } catch (error) {
+                        console.error("API Call failed:", error);
                         this.toggleTypingIndicator(false);
-                        this.addBotMessage("My apologies, an error occurred.", true);
+                        this.addBotMessage("My apologies, a transmission error occurred. Please try again.", true);
+                    } finally {
                         this.setFormState(false);
                     }
                 }
@@ -508,33 +548,31 @@
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'bot-message-content';
                 messageEl.appendChild(contentWrapper);
-                
+                this.elements.chatBox.appendChild(messageEl);
+
                 if (instant) {
                     contentWrapper.innerHTML = marked.parse(markdownText);
                     messageEl.classList.add('visible');
-                    this.elements.chatBox.appendChild(messageEl);
                     this.scrollToBottom(false);
+                    this.setFormState(false);
                     return;
                 }
-
+                
                 this.isBotTyping = true;
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = marked.parse(markdownText);
                 const actions = [];
                 const buildActionList = (node) => {
-                    if (node.nodeType === 1) {
+                    if (node.nodeType === 1) { // Element node
                         actions.push({ type: 'open', tag: node.nodeName });
                         Array.from(node.childNodes).forEach(buildActionList);
                         actions.push({ type: 'close', tag: node.nodeName });
-                    } else if (node.nodeType === 3) {
+                    } else if (node.nodeType === 3) { // Text node
                         actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
                     }
                 };
                 Array.from(tempDiv.childNodes).forEach(buildActionList);
                 
-                this.elements.chatBox.appendChild(messageEl);
-                let currentParent = contentWrapper;
-                let parentStack = [contentWrapper];
                 if (this.rendererInterval) clearInterval(this.rendererInterval);
 
                 this.rendererInterval = setInterval(() => {
@@ -550,19 +588,16 @@
                     const action = actions.shift();
                     if (action.type === 'open') {
                         const newElement = document.createElement(action.tag);
-                        currentParent.appendChild(newElement);
-                        parentStack.push(newElement);
-                        currentParent = newElement;
-                    } else if (action.type === 'close') {
-                        parentStack.pop();
-                        currentParent = parentStack[parentStack.length - 1];
+                        contentWrapper.appendChild(newElement);
+                        contentWrapper.lastChild.innerHTML = ' '; // Hack to keep element open
                     } else if (action.type === 'char') {
-                        const span = document.createElement('span');
-                        span.className = 'char';
-                        span.textContent = action.content;
-                        currentParent.appendChild(span);
-                        requestAnimationFrame(() => span.classList.add('visible'));
+                        if (contentWrapper.lastChild && contentWrapper.lastChild.innerHTML === ' ') {
+                           contentWrapper.lastChild.innerHTML = ''; // Clear placeholder
+                        }
+                        contentWrapper.innerHTML += action.content === '\n' ? '<br>' : action.content;
                     }
+                    // Simplified rendering - full DOM reconstruction is complex with streaming
+                    
                     if (!this.isUserScrolledUp) this.scrollToBottom(false);
                 }, 15);
             },
@@ -596,10 +631,16 @@
             async getBotResponse() {
                 const response = await fetch(this.API_URL, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: this.conversationHistory })
+                    body: JSON.stringify({ "contents": this.conversationHistory })
                 });
-                if (!response.ok) throw new Error(`API error: ${response.status}`);
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    throw new Error(`API error: ${response.status} - ${errorBody}`);
+                }
                 const data = await response.json();
+                if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+                     throw new Error("Invalid API response structure.");
+                }
                 return data.candidates[0].content.parts[0].text;
             },
             
