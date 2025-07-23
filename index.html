@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- ⬇️ Your Client ID goes here. The one you provided should work perfectly. ⬇️ -->
     <meta name="google-signin-client_id" content="867344501671-f8i2n6hvtm2321tf5kdfu0oqvmghiih7.apps.googleusercontent.com">
     <title>G-AI 👑</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -96,10 +95,8 @@
         
         .side-menu-header { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
         
-        /* --- Login Display Fix --- */
         .force-hidden { display: none !important; }
         #user-profile { display: flex; align-items: center; gap: 15px; }
-        /* --- End Login Display Fix --- */
 
         #user-profile img { width: 40px; height: 40px; border-radius: 50%; }
         #user-profile p { margin: 0; font-weight: 600; }
@@ -194,7 +191,7 @@
     </style>
 </head>
 <body>
-    <div id="beta-banner">G-AI is still in beta. Some features may not work as intended.</div>
+    <div id="beta-banner">G-AI is in beta. Some features may not work as intended.</div>
 
     <div id="g_id_onload" 
          data-client_id="867344501671-f8i2n6hvtm2321tf5kdfu0oqvmghiih7.apps.googleusercontent.com"
@@ -262,7 +259,7 @@
 
         const chatApp = {
             API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
-            MODEL_NAME: "gemini-1.5-flash", // Corrected to a valid, public model name.
+            MODEL_NAME: "gemini-2.5-flash", 
             
             initialSystemPromptText: "SYSTEM: You are G-AI. Your personality is a mix of a cryptic mentor and a futuristic tech-prophet.",
             userInfo: null,
@@ -280,23 +277,22 @@
                 this.addEventListeners();
                 this.showBetaBanner();
                 await this.loadCorePrompt();
+                
                 const storedUser = localStorage.getItem('g-ai-user');
                 if (storedUser) {
                     this.handleLogin(JSON.parse(storedUser));
                 } else {
-                    // Ensure UI is in the logged-out state initially
-                    this.elements.loginPrompt.classList.remove('force-hidden');
-                    this.elements.userProfile.classList.add('force-hidden');
-                    this.startNewChat(false);
+                    this.showLoginUI();
+                    this.startNewChat(false); 
                 }
                 this.runIntroAnimation();
             },
-            
+
             showBetaBanner() {
                 const banner = this.elements.betaBanner;
                 if (!banner) return;
-                setTimeout(() => { banner.classList.add('visible'); }, 2000); 
-                setTimeout(() => { banner.classList.remove('visible'); }, 7000);
+                setTimeout(() => banner.classList.add('visible'), 2000); 
+                setTimeout(() => banner.classList.remove('visible'), 7000);
             },
 
             async loadCorePrompt() {
@@ -360,6 +356,18 @@
                 });
             },
 
+            showLoginUI() {
+                this.elements.userProfile.classList.add('force-hidden');
+                this.elements.chatHistoryContainer.style.display = 'none';
+                this.elements.loginPrompt.classList.remove('force-hidden');
+            },
+
+            showProfileUI() {
+                this.elements.loginPrompt.classList.add('force-hidden');
+                this.elements.userProfile.classList.remove('force-hidden');
+                this.elements.chatHistoryContainer.style.display = 'block';
+            },
+
             handleLogin(userPayload) {
                 if (!userPayload) { this.handleLogout(); return; }
                 this.userInfo = userPayload;
@@ -368,12 +376,8 @@
                 this.elements.userName.textContent = this.userInfo.name;
                 this.elements.userPic.src = this.userInfo.picture;
 
-                // --- LOGIN DISPLAY FIX ---
-                this.elements.loginPrompt.classList.add('force-hidden');
-                this.elements.userProfile.classList.remove('force-hidden');
-                this.elements.chatHistoryContainer.style.display = 'block';
-
-                this.loadChatHistory();
+                this.showProfileUI();
+                this.loadUserChats();
             },
 
             handleLogout() {
@@ -381,13 +385,9 @@
                 localStorage.removeItem('g-ai-user');
                 if (window.google) google.accounts.id.disableAutoSelect();
                 
-                // --- LOGIN DISPLAY FIX ---
-                this.elements.userProfile.classList.add('force-hidden');
-                this.elements.loginPrompt.classList.remove('force-hidden');
-                this.elements.chatHistoryContainer.style.display = 'none';
-
-                this.elements.chatHistoryList.innerHTML = '';
-                this.startNewChat(true);
+                this.showLoginUI();
+                this.elements.chatHistoryList.innerHTML = ''; 
+                this.startNewChat(true); 
                 this.closeSideMenu();
             },
             
@@ -403,23 +403,26 @@
 
             startNewChat(renderMessage = true) {
                 if (this.isBotTyping) clearInterval(this.rendererInterval);
+                
                 this.currentChatId = `chat_${Date.now()}`;
                 this.conversationHistory = [
                     { role: "user", parts: [{ text: this.initialSystemPromptText }] },
                     { role: "model", parts: [{ text: "They want you to be a pawn. I program kings.\n\nYour move." }] }
                 ];
+                
                 this.elements.chatBox.innerHTML = '';
                 if (renderMessage) {
                     this.addBotMessage(this.conversationHistory[1].parts[0].text, true);
                 }
 
                 if (this.userInfo) {
-                    const history = this.getStoredChats();
+                    const allChats = this.getStoredChats();
                     const newChatData = { id: this.currentChatId, title: "New Chat", conversationHistory: this.conversationHistory };
-                    history.unshift(newChatData);
-                    localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(history));
-                    this.renderChatHistory(history);
+                    allChats.unshift(newChatData);
+                    localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(allChats));
+                    this.renderChatHistory(allChats);
                 }
+                
                 this.updateHistoryUI();
                 this.closeSideMenu();
             },
@@ -427,15 +430,18 @@
             loadChat(chatId) {
                 if (!this.userInfo) return;
                 const chatToLoad = this.getStoredChats().find(c => c.id === chatId);
+                
                 if (chatToLoad) {
                     this.currentChatId = chatToLoad.id;
                     this.conversationHistory = chatToLoad.conversationHistory;
                     this.elements.chatBox.innerHTML = '';
-                    this.conversationHistory.slice(1).forEach(msg => {
+                    
+                    this.conversationHistory.slice(1).forEach(msg => { // slice(1) to skip system prompt
                         const text = msg.parts[0].text;
                         if (msg.role === 'model') this.addBotMessage(text, true);
                         else if (msg.role === 'user') this.addMessage(text, 'user-message');
                     });
+                    
                     this.updateHistoryUI();
                     this.closeSideMenu();
                 }
@@ -448,38 +454,40 @@
 
             saveCurrentChat() {
                 if (!this.userInfo || !this.currentChatId) return;
-                const history = this.getStoredChats();
-                const currentChatIndex = history.findIndex(c => c.id === this.currentChatId);
-                if (currentChatIndex === -1) return;
+
+                const allChats = this.getStoredChats();
+                const currentChatIndex = allChats.findIndex(c => c.id === this.currentChatId);
+                
+                if (currentChatIndex === -1) return; 
 
                 const firstUserMessage = this.conversationHistory.find(m => m.role === 'user' && m.parts[0].text !== this.initialSystemPromptText);
-                const title = firstUserMessage ? firstUserMessage.parts[0].text.substring(0, 30) : 'New Chat';
+                const title = firstUserMessage ? firstUserMessage.parts[0].text.substring(0, 35) : 'New Chat';
                 
                 const chatData = { 
                     id: this.currentChatId, 
-                    title: title + (firstUserMessage && firstUserMessage.parts[0].text.length > 30 ? '...' : ''), 
+                    title: title + (firstUserMessage && firstUserMessage.parts[0].text.length > 35 ? '...' : ''), 
                     conversationHistory: this.conversationHistory 
                 };
 
-                history[currentChatIndex] = chatData;
+                allChats[currentChatIndex] = chatData;
                 
-                localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(history));
-                this.renderChatHistory(history);
+                localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(allChats));
+                this.renderChatHistory(allChats);
             },
 
-            loadChatHistory() {
-                const history = this.getStoredChats();
-                if (history.length > 0) {
-                    this.loadChat(history[0].id);
+            loadUserChats() {
+                const allChats = this.getStoredChats();
+                if (allChats.length > 0) {
+                    this.loadChat(allChats[0].id); // Load the most recent chat
                 } else {
-                    this.startNewChat(true);
+                    this.startNewChat(true); // Start a new chat if none exist
                 }
-                this.renderChatHistory(history);
+                this.renderChatHistory(allChats);
             },
 
-            renderChatHistory(history) {
+            renderChatHistory(allChats) {
                 this.elements.chatHistoryList.innerHTML = '';
-                history.forEach(chat => {
+                allChats.forEach(chat => {
                     const li = document.createElement('li');
                     li.textContent = chat.title;
                     li.dataset.chatId = chat.id;
@@ -548,23 +556,26 @@
                 }
                 
                 this.isBotTyping = true;
-                contentWrapper.innerHTML = "";
                 messageEl.classList.add('visible');
                 
                 const parsedHtml = marked.parse(markdownText);
-                const textContent = new DOMParser().parseFromString(parsedHtml, "text/html").documentElement.textContent || "";
+                let fullText = "";
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = parsedHtml;
+                fullText = tempDiv.textContent || "";
                 
                 let i = 0;
+                contentWrapper.innerHTML = "";
                 if(this.rendererInterval) clearInterval(this.rendererInterval);
 
                 this.rendererInterval = setInterval(() => {
-                    if (i < textContent.length) {
-                        contentWrapper.textContent += textContent[i];
+                    if (i < fullText.length) {
+                        contentWrapper.textContent += fullText[i];
                         i++;
                         if (!this.isUserScrolledUp) this.scrollToBottom(false);
                     } else {
                         clearInterval(this.rendererInterval);
-                        contentWrapper.innerHTML = parsedHtml; // Set final parsed HTML
+                        contentWrapper.innerHTML = parsedHtml; 
                         this.isBotTyping = false;
                         this.setFormState(false);
                         this.handleScroll();
