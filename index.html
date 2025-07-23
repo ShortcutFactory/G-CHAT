@@ -54,7 +54,7 @@
         .chat-wrapper {
             width: 100%; height: 100%; max-width: 800px;
             position: relative; border-radius: 20px;
-            overflow: hidden; /* Crucial for the slide-in animation */
+            overflow: hidden;
         }
         
         .chat-container {
@@ -65,11 +65,7 @@
             display: flex; flex-direction: column;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
             position: relative;
-            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-        }
-        /* --- Style for when the menu is open --- */
-        .chat-container.menu-open {
-            transform: translateX(320px);
+            z-index: 2; /* Sits below the side menu */
         }
 
         #side-menu {
@@ -78,7 +74,7 @@
             background: rgba(16, 16, 18, 0.9);
             backdrop-filter: blur(15px) saturate(180%);
             border-right: 1px solid var(--border-color);
-            z-index: 100;
+            z-index: 100; /* Sits on top of the chat container */
             transform: translateX(-100%);
             transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
             display: flex; flex-direction: column;
@@ -86,19 +82,6 @@
         }
         #side-menu.open {
             transform: translateX(0);
-        }
-        #overlay {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: 99;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.4s ease;
-        }
-        #overlay.visible {
-            opacity: 1;
-            pointer-events: auto;
         }
         
         .side-menu-header { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
@@ -151,7 +134,7 @@
             opacity: 0; pointer-events: none; transition: opacity 0.3s ease-out;
         }
         #scroll-down-btn.visible { opacity: 1; pointer-events: auto; }
-        #scroll-down-btn svg { width: 20px; height: 20px; }
+        #scroll-down-btn svg { width: 20px; height: 20px; transform: rotate(180deg);}
 
         .message { max-width: 80%; line-height: 1.6; word-wrap: break-word; }
         .bot-message { align-self: flex-start; background: var(--gradient); color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
@@ -191,7 +174,6 @@
             .chat-wrapper, .chat-container { border-radius: 0; }
             #main-content { padding: 0; }
             #side-menu { width: 280px; }
-            .chat-container.menu-open { transform: translateX(280px); }
         }
     </style>
 </head>
@@ -202,7 +184,6 @@
 
     <div id="main-content">
         <div class="chat-wrapper">
-            <div id="overlay"></div>
             <div id="side-menu">
                 <div class="side-menu-header">
                     <div id="login-prompt">
@@ -235,7 +216,7 @@
                 </header>
                 <div class="chat-box" id="chat-box" role="log" aria-live="polite"></div>
                 <button id="scroll-down-btn" aria-label="Scroll to bottom">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" transform="rotate(180 10 10)"><path fill-rule="evenodd" d="M10 15a.75.75 0 01-.75-.75V7.56l-1.97 1.97a.75.75 0 11-1.06-1.06l3.5-3.5a.75.75 0 011.06 0l3.5 3.5a.75.75 0 11-1.06 1.06L10.75 7.56v6.69a.75.75 0 01-.75-.75z" clip-rule="evenodd"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 15a.75.75 0 01-.75-.75V7.56l-1.97 1.97a.75.75 0 11-1.06-1.06l3.5-3.5a.75.75 0 011.06 0l3.5 3.5a.75.75 0 11-1.06 1.06L10.75 7.56v6.69a.75.75 0 01-.75-.75z" clip-rule="evenodd"/></svg>
                 </button>
                 <form class="chat-form" id="chat-form">
                     <input type="text" id="user-input" placeholder="Forge your reality..." autocomplete="off">
@@ -261,6 +242,7 @@
             API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
             MODEL_NAME: "gemini-1.5-flash",
             
+            initialSystemPromptText: "SYSTEM: You are G-AI. Your personality is a mix of a cryptic mentor and a futuristic tech-prophet.",
             userInfo: null,
             currentChatId: null,
             conversationHistory: [],
@@ -274,10 +256,24 @@
             async init() {
                 this.cacheDOMElements();
                 this.addEventListeners();
-                this.runIntroAnimation();
+                await this.loadCorePrompt();
                 const storedUser = localStorage.getItem('g-ai-user');
-                if (storedUser) this.handleLogin(JSON.parse(storedUser));
-                else this.startNewChat();
+                if (storedUser) {
+                    this.handleLogin(JSON.parse(storedUser));
+                } else {
+                    this.startNewChat(false); // Silently init the first chat data
+                }
+                this.runIntroAnimation();
+            },
+
+            async loadCorePrompt() {
+                try {
+                    const response = await fetch('prompt.txt');
+                    if (!response.ok) throw new Error('Network response was not ok.');
+                    this.initialSystemPromptText = await response.text();
+                } catch (error) {
+                    console.error('Failed to load prompt.txt. Using default prompt.', error);
+                }
             },
 
             cacheDOMElements() {
@@ -293,7 +289,6 @@
                     menuBtn: document.getElementById('menu-btn'),
                     newChatBtn: document.getElementById('new-chat-btn'),
                     sideMenu: document.getElementById('side-menu'),
-                    overlay: document.getElementById('overlay'),
                     loginPrompt: document.getElementById('login-prompt'),
                     userProfile: document.getElementById('user-profile'),
                     userName: document.getElementById('user-name'),
@@ -309,6 +304,7 @@
                     this.elements.animationContainer.style.opacity = '0';
                     this.elements.mainContent.classList.add('visible');
                     this.elements.animationContainer.addEventListener('transitionend', () => this.elements.animationContainer.style.display = 'none', { once: true });
+                    // Only render the first message via the animation
                     setTimeout(() => {
                         if (this.conversationHistory.length > 1) {
                            this.addBotMessage(this.conversationHistory[1].parts[0].text);
@@ -322,9 +318,12 @@
                 this.elements.chatBox.addEventListener('scroll', this.handleScroll.bind(this));
                 this.elements.scrollDownBtn.addEventListener('click', () => this.scrollToBottom(true));
                 this.elements.menuBtn.addEventListener('click', this.toggleSideMenu.bind(this));
-                this.elements.overlay.addEventListener('click', this.closeSideMenu.bind(this));
-                this.elements.newChatBtn.addEventListener('click', () => this.startNewChat());
+                this.elements.newChatBtn.addEventListener('click', () => this.startNewChat(true));
                 this.elements.logoutBtn.addEventListener('click', this.handleLogout.bind(this));
+                // Click on the main chat area to close the menu
+                this.elements.chatContainer.addEventListener('click', () => {
+                    if(this.isMenuOpen) this.closeSideMenu();
+                });
             },
 
             handleLogin(userPayload) {
@@ -342,38 +341,36 @@
             handleLogout() {
                 this.userInfo = null;
                 localStorage.removeItem('g-ai-user');
-                google.accounts.id.disableAutoSelect();
+                if (window.google) google.accounts.id.disableAutoSelect();
                 this.elements.userProfile.style.display = 'none';
                 this.elements.loginPrompt.style.display = 'block';
                 this.elements.chatHistoryContainer.style.display = 'none';
                 this.elements.chatHistoryList.innerHTML = '';
-                this.startNewChat();
+                this.startNewChat(true);
                 this.closeSideMenu();
             },
             
             toggleSideMenu() {
                 this.isMenuOpen = !this.isMenuOpen;
                 this.elements.sideMenu.classList.toggle('open', this.isMenuOpen);
-                this.elements.chatContainer.classList.toggle('menu-open', this.isMenuOpen);
-                this.elements.overlay.classList.toggle('visible', this.isMenuOpen);
             },
             closeSideMenu() {
                 if (!this.isMenuOpen) return;
                 this.isMenuOpen = false;
                 this.elements.sideMenu.classList.remove('open');
-                this.elements.chatContainer.classList.remove('menu-open');
-                this.elements.overlay.classList.remove('visible');
             },
 
-            startNewChat() {
+            startNewChat(renderMessage = true) {
                 if (this.isBotTyping) clearInterval(this.rendererInterval);
                 this.currentChatId = `chat_${Date.now()}`;
                 this.conversationHistory = [
-                    { role: "model", parts: [{ text: "SYSTEM: You are G-AI..." }] },
+                    { role: "model", parts: [{ text: this.initialSystemPromptText }] },
                     { role: "model", parts: [{ text: "They want you to be a pawn. I program kings.\n\nYour move." }] }
                 ];
                 this.elements.chatBox.innerHTML = '';
-                this.addBotMessage(this.conversationHistory[1].parts[0].text, true); // Add instantly
+                if (renderMessage) {
+                    this.addBotMessage(this.conversationHistory[1].parts[0].text, true); // Add instantly
+                }
                 this.updateHistoryUI();
                 this.closeSideMenu();
             },
@@ -416,7 +413,7 @@
             loadChatHistory() {
                 const history = this.getStoredChats();
                 if (history.length > 0) this.loadChat(history[0].id);
-                else this.startNewChat();
+                else this.startNewChat(true);
                 this.renderChatHistory(history);
             },
 
@@ -465,17 +462,22 @@
             addMessage(text, cssClass) {
                 const el = document.createElement('div');
                 el.classList.add('message', cssClass);
-                el.innerHTML = marked.parse(text); // Use marked to parse potential markdown in user messages too
+                el.innerHTML = marked.parse(text);
                 this.elements.chatBox.appendChild(el);
                 this.scrollToBottom(false);
             },
             
             addBotMessage(markdownText, instant = false) {
+                const messageEl = document.createElement('div');
+                messageEl.className = 'message bot-message';
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'bot-message-content';
+                messageEl.appendChild(contentWrapper);
+                
                 if (instant) {
-                    const el = document.createElement('div');
-                    el.classList.add('message', 'bot-message', 'visible');
-                    el.innerHTML = `<div class="bot-message-content">${marked.parse(markdownText)}</div>`;
-                    this.elements.chatBox.appendChild(el);
+                    contentWrapper.innerHTML = marked.parse(markdownText);
+                    messageEl.classList.add('visible');
+                    this.elements.chatBox.appendChild(messageEl);
                     this.scrollToBottom(false);
                     return;
                 }
@@ -494,14 +496,8 @@
                     }
                 };
                 Array.from(tempDiv.childNodes).forEach(buildActionList);
-
-                const messageElement = document.createElement('div');
-                messageElement.className = 'message bot-message';
-                const contentWrapper = document.createElement('div');
-                contentWrapper.className = 'bot-message-content';
-                messageElement.appendChild(contentWrapper);
-                this.elements.chatBox.appendChild(messageElement);
-
+                
+                this.elements.chatBox.appendChild(messageEl);
                 let currentParent = contentWrapper;
                 let parentStack = [contentWrapper];
                 if (this.rendererInterval) clearInterval(this.rendererInterval);
@@ -514,7 +510,7 @@
                         this.handleScroll();
                         return;
                     }
-                    if (!messageElement.classList.contains('visible')) messageElement.classList.add('visible');
+                    if (!messageEl.classList.contains('visible')) messageEl.classList.add('visible');
 
                     const action = actions.shift();
                     if (action.type === 'open') {
