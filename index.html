@@ -43,28 +43,17 @@
         }
         #logo-transformer { font-family: 'Orbitron', sans-serif; font-size: clamp(3rem, 15vw, 8rem); }
         
-        /* --- BETA BANNER --- */
         #beta-banner {
-            position: fixed;
-            top: 20px;
-            left: 50%;
+            position: fixed; top: 20px; left: 50%;
             transform: translate(-50%, -150%);
-            background: var(--gradient);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            z-index: 1001;
-            font-size: 0.9rem;
-            opacity: 0;
+            background: var(--gradient); color: white;
+            padding: 10px 20px; border-radius: 8px; z-index: 1001;
+            font-size: 0.9rem; opacity: 0;
             transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.5s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
             white-space: nowrap;
         }
-        #beta-banner.visible {
-            transform: translate(-50%, 0);
-            opacity: 1;
-        }
-        /* --- END BETA BANNER --- */
+        #beta-banner.visible { transform: translate(-50%, 0); opacity: 1; }
 
         #main-content {
             opacity: 0; transition: opacity 1.2s ease-in;
@@ -103,17 +92,20 @@
             display: flex; flex-direction: column;
             padding: 20px;
         }
-        #side-menu.open {
-            transform: translateX(0);
-        }
+        #side-menu.open { transform: translateX(0); }
         
         .side-menu-header { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        
+        /* --- Login Display Fix --- */
+        .force-hidden { display: none !important; }
         #user-profile { display: flex; align-items: center; gap: 15px; }
+        /* --- End Login Display Fix --- */
+
         #user-profile img { width: 40px; height: 40px; border-radius: 50%; }
         #user-profile p { margin: 0; font-weight: 600; }
         #logout-btn { background: none; border: none; color: var(--text-dark); cursor: pointer; margin-left: auto; padding: 5px; }
         #logout-btn:hover { color: var(--text-light); }
-        #chat-history-container { flex-grow: 1; overflow-y: auto; }
+        #chat-history-container { flex-grow: 1; overflow-y: auto; display: none; }
         #chat-history-container h3 { margin-bottom: 15px; font-size: 1.1rem; color: var(--text-dark); }
         #chat-history-list { list-style: none; padding:0; }
         #chat-history-list li {
@@ -220,7 +212,7 @@
                         <p>Login to save & view chat history.</p>
                         <div class="g_id_signin" data-type="standard"></div>
                     </div>
-                    <div id="user-profile" style="display: none;">
+                    <div id="user-profile" class="force-hidden">
                         <img id="user-pic" src="" alt="User profile picture">
                         <div>
                            <p id="user-name"></p>
@@ -228,7 +220,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="chat-history-container" style="display: none;">
+                <div id="chat-history-container">
                     <h3>History</h3>
                     <ul id="chat-history-list"></ul>
                 </div>
@@ -269,8 +261,8 @@
         }
 
         const chatApp = {
-            API_KEY: "YOUR_API_KEY_HERE", // IMPORTANT: Replace with your actual API key
-            MODEL_NAME: "gemini-1.5-flash",
+            API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
+            MODEL_NAME: "gemini-1.5-flash", // Corrected to a valid, public model name.
             
             initialSystemPromptText: "SYSTEM: You are G-AI. Your personality is a mix of a cryptic mentor and a futuristic tech-prophet.",
             userInfo: null,
@@ -286,12 +278,15 @@
             async init() {
                 this.cacheDOMElements();
                 this.addEventListeners();
-                this.showBetaBanner(); // Show the beta banner
+                this.showBetaBanner();
                 await this.loadCorePrompt();
                 const storedUser = localStorage.getItem('g-ai-user');
                 if (storedUser) {
                     this.handleLogin(JSON.parse(storedUser));
                 } else {
+                    // Ensure UI is in the logged-out state initially
+                    this.elements.loginPrompt.classList.remove('force-hidden');
+                    this.elements.userProfile.classList.add('force-hidden');
                     this.startNewChat(false);
                 }
                 this.runIntroAnimation();
@@ -300,18 +295,8 @@
             showBetaBanner() {
                 const banner = this.elements.betaBanner;
                 if (!banner) return;
-                
-                // Show banner after the main content starts fading in
-                setTimeout(() => {
-                    banner.classList.add('visible');
-                }, 2000); 
-
-                // Hide banner after 7 seconds total (2s delay + 5s visible)
-                setTimeout(() => {
-                    banner.classList.remove('visible');
-                    // Optional: remove from DOM after transition
-                    banner.addEventListener('transitionend', () => banner.remove(), { once: true });
-                }, 7000);
+                setTimeout(() => { banner.classList.add('visible'); }, 2000); 
+                setTimeout(() => { banner.classList.remove('visible'); }, 7000);
             },
 
             async loadCorePrompt() {
@@ -344,7 +329,7 @@
                     logoutBtn: document.getElementById('logout-btn'),
                     chatHistoryContainer: document.getElementById('chat-history-container'),
                     chatHistoryList: document.getElementById('chat-history-list'),
-                    betaBanner: document.getElementById('beta-banner'), // Cache banner element
+                    betaBanner: document.getElementById('beta-banner'),
                 };
             },
 
@@ -368,7 +353,7 @@
                 this.elements.menuBtn.addEventListener('click', this.toggleSideMenu.bind(this));
                 this.elements.newChatBtn.addEventListener('click', () => this.startNewChat(true));
                 this.elements.logoutBtn.addEventListener('click', this.handleLogout.bind(this));
-                this.elements.chatContainer.addEventListener('click', (e) => {
+                document.body.addEventListener('click', (e) => {
                     if (this.isMenuOpen && !this.elements.sideMenu.contains(e.target) && !this.elements.menuBtn.contains(e.target)) {
                         this.closeSideMenu();
                     }
@@ -379,11 +364,15 @@
                 if (!userPayload) { this.handleLogout(); return; }
                 this.userInfo = userPayload;
                 localStorage.setItem('g-ai-user', JSON.stringify(this.userInfo));
+                
                 this.elements.userName.textContent = this.userInfo.name;
                 this.elements.userPic.src = this.userInfo.picture;
-                this.elements.loginPrompt.style.display = 'none';
-                this.elements.userProfile.style.display = 'flex';
+
+                // --- LOGIN DISPLAY FIX ---
+                this.elements.loginPrompt.classList.add('force-hidden');
+                this.elements.userProfile.classList.remove('force-hidden');
                 this.elements.chatHistoryContainer.style.display = 'block';
+
                 this.loadChatHistory();
             },
 
@@ -391,9 +380,12 @@
                 this.userInfo = null;
                 localStorage.removeItem('g-ai-user');
                 if (window.google) google.accounts.id.disableAutoSelect();
-                this.elements.userProfile.style.display = 'none';
-                this.elements.loginPrompt.style.display = 'block';
+                
+                // --- LOGIN DISPLAY FIX ---
+                this.elements.userProfile.classList.add('force-hidden');
+                this.elements.loginPrompt.classList.remove('force-hidden');
                 this.elements.chatHistoryContainer.style.display = 'none';
+
                 this.elements.chatHistoryList.innerHTML = '';
                 this.startNewChat(true);
                 this.closeSideMenu();
@@ -439,7 +431,6 @@
                     this.currentChatId = chatToLoad.id;
                     this.conversationHistory = chatToLoad.conversationHistory;
                     this.elements.chatBox.innerHTML = '';
-                    // Start from index 1 to skip the system prompt
                     this.conversationHistory.slice(1).forEach(msg => {
                         const text = msg.parts[0].text;
                         if (msg.role === 'model') this.addBotMessage(text, true);
@@ -459,9 +450,8 @@
                 if (!this.userInfo || !this.currentChatId) return;
                 const history = this.getStoredChats();
                 const currentChatIndex = history.findIndex(c => c.id === this.currentChatId);
-                if (currentChatIndex === -1) return; // Should not happen if startNewChat is correct
+                if (currentChatIndex === -1) return;
 
-                // Determine title from the first user message (that isn't the system prompt)
                 const firstUserMessage = this.conversationHistory.find(m => m.role === 'user' && m.parts[0].text !== this.initialSystemPromptText);
                 const title = firstUserMessage ? firstUserMessage.parts[0].text.substring(0, 30) : 'New Chat';
                 
@@ -480,9 +470,9 @@
             loadChatHistory() {
                 const history = this.getStoredChats();
                 if (history.length > 0) {
-                    this.loadChat(history[0].id); // Load the most recent chat
+                    this.loadChat(history[0].id);
                 } else {
-                    this.startNewChat(true); // Start the very first chat for a new user
+                    this.startNewChat(true);
                 }
                 this.renderChatHistory(history);
             },
@@ -514,14 +504,13 @@
                     this.elements.userInput.value = '';
                     this.setFormState(true);
                     
-                    this.saveCurrentChat(); // Save chat to update title immediately
-                    
+                    this.saveCurrentChat(); 
                     this.toggleTypingIndicator(true);
                     
                     try {
                         const botText = await this.getBotResponse();
                         this.updateHistory("model", botText);
-                        this.saveCurrentChat(); // Save again with bot's response
+                        this.saveCurrentChat(); 
                         this.toggleTypingIndicator(false);
                         this.addBotMessage(botText);
                     } catch (error) {
@@ -559,46 +548,27 @@
                 }
                 
                 this.isBotTyping = true;
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = marked.parse(markdownText);
-                const actions = [];
-                const buildActionList = (node) => {
-                    if (node.nodeType === 1) { // Element node
-                        actions.push({ type: 'open', tag: node.nodeName });
-                        Array.from(node.childNodes).forEach(buildActionList);
-                        actions.push({ type: 'close', tag: node.nodeName });
-                    } else if (node.nodeType === 3) { // Text node
-                        actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
-                    }
-                };
-                Array.from(tempDiv.childNodes).forEach(buildActionList);
+                contentWrapper.innerHTML = "";
+                messageEl.classList.add('visible');
                 
-                if (this.rendererInterval) clearInterval(this.rendererInterval);
+                const parsedHtml = marked.parse(markdownText);
+                const textContent = new DOMParser().parseFromString(parsedHtml, "text/html").documentElement.textContent || "";
+                
+                let i = 0;
+                if(this.rendererInterval) clearInterval(this.rendererInterval);
 
                 this.rendererInterval = setInterval(() => {
-                    if (actions.length === 0) {
+                    if (i < textContent.length) {
+                        contentWrapper.textContent += textContent[i];
+                        i++;
+                        if (!this.isUserScrolledUp) this.scrollToBottom(false);
+                    } else {
                         clearInterval(this.rendererInterval);
+                        contentWrapper.innerHTML = parsedHtml; // Set final parsed HTML
                         this.isBotTyping = false;
                         this.setFormState(false);
                         this.handleScroll();
-                        return;
                     }
-                    if (!messageEl.classList.contains('visible')) messageEl.classList.add('visible');
-
-                    const action = actions.shift();
-                    if (action.type === 'open') {
-                        const newElement = document.createElement(action.tag);
-                        contentWrapper.appendChild(newElement);
-                        contentWrapper.lastChild.innerHTML = ' '; // Hack to keep element open
-                    } else if (action.type === 'char') {
-                        if (contentWrapper.lastChild && contentWrapper.lastChild.innerHTML === ' ') {
-                           contentWrapper.lastChild.innerHTML = ''; // Clear placeholder
-                        }
-                        contentWrapper.innerHTML += action.content === '\n' ? '<br>' : action.content;
-                    }
-                    // Simplified rendering - full DOM reconstruction is complex with streaming
-                    
-                    if (!this.isUserScrolledUp) this.scrollToBottom(false);
                 }, 15);
             },
             
@@ -635,7 +605,8 @@
                 });
                 if (!response.ok) {
                     const errorBody = await response.text();
-                    throw new Error(`API error: ${response.status} - ${errorBody}`);
+                    console.error("API Error Response:", errorBody);
+                    throw new Error(`API error: ${response.status}`);
                 }
                 const data = await response.json();
                 if (!data.candidates || !data.candidates[0].content.parts[0].text) {
