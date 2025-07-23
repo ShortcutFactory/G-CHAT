@@ -74,53 +74,46 @@
         
         #main-content.visible { opacity: 1; }
 
-        /* --- New Wrapper for Chat + Side Menu --- */
         .chat-wrapper {
             width: 100%;
             height: 100%;
             max-width: 800px;
             position: relative;
-            overflow: hidden; /* This is crucial for the new menu animation */
             border-radius: 20px;
+            overflow: hidden; /* Clips the corners of the chat container */
         }
         
         .chat-container {
             width: 100%; height: 100%;
             background: var(--surface-alpha);
             backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid var(--border-color);
-            border-radius: 20px;
             display: flex; flex-direction: column;
-            overflow: hidden;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
             position: relative;
-            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s;
-        }
-        .chat-container.menu-open {
-            transform: translateX(300px);
-            opacity: 0.7;
-            pointer-events: none; /* Disable interaction with chat when menu is open */
         }
 
+        /* --- New Overlay Menu Style --- */
         #side-menu {
             position: absolute;
             top: 0;
             left: 0;
-            width: 300px;
+            width: 100%;
             height: 100%;
-            background: var(--surface-alpha);
-            backdrop-filter: blur(25px) saturate(200%);
-            border-right: 1px solid var(--border-color);
+            background-color: rgba(10, 10, 10, 0.7); /* Dark semi-transparent background */
+            backdrop-filter: blur(4px) saturate(150%);
+            -webkit-backdrop-filter: blur(4px) saturate(150%);
             z-index: 100;
-            transform: translateX(-100%);
-            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            opacity: 0; /* Hidden by default */
+            pointer-events: none; /* Not interactive when hidden */
+            transition: opacity 0.4s ease;
             display: flex;
             flex-direction: column;
             padding: 20px;
         }
-        #side-menu.open {
-            transform: translateX(0);
+        #side-menu.visible {
+            opacity: 1;
+            pointer-events: auto; /* Interactive when visible */
         }
 
         .side-menu-header {
@@ -130,42 +123,14 @@
             flex-shrink: 0;
         }
 
-        #user-profile {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        #user-profile img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-        }
-        #user-profile p {
-            margin: 0;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        #logout-btn {
-            background: none;
-            border: none;
-            color: var(--text-dark);
-            cursor: pointer;
-            margin-left: auto;
-            padding: 5px;
-        }
+        #user-profile { display: flex; align-items: center; gap: 15px; }
+        #user-profile img { width: 40px; height: 40px; border-radius: 50%; }
+        #user-profile p { margin: 0; font-weight: 600; }
+        #logout-btn { background: none; border: none; color: var(--text-dark); cursor: pointer; margin-left: auto; padding: 5px; }
         #logout-btn:hover { color: var(--text-light); }
 
-        #chat-history-container {
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-        #chat-history-container h3 {
-            margin-bottom: 15px;
-            font-size: 1.1rem;
-            color: var(--text-dark);
-        }
+        #chat-history-container { flex-grow: 1; overflow-y: auto; }
+        #chat-history-container h3 { margin-bottom: 15px; font-size: 1.1rem; color: var(--text-dark); }
         #chat-history-list { list-style: none; }
         #chat-history-list li {
             padding: 12px 15px;
@@ -176,9 +141,10 @@
             overflow: hidden;
             text-overflow: ellipsis;
             transition: background-color 0.2s ease;
+            background-color: rgba(255, 255, 255, 0.05);
         }
         #chat-history-list li:hover, #chat-history-list li.active {
-            background-color: rgba(255, 255, 255, 0.08);
+            background-color: rgba(255, 255, 255, 0.12);
         }
 
         .chat-header {
@@ -199,9 +165,7 @@
             -webkit-text-fill-color: transparent;
             animation: animate-gradient 5s ease infinite;
         }
-        @keyframes animate-gradient {
-            0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
-        }
+        @keyframes animate-gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         .header-btn {
             background: transparent;
             border: none;
@@ -211,6 +175,8 @@
             border-radius: 50%;
             display: flex;
             transition: background-color 0.2s ease;
+            position: relative;
+            z-index: 101; /* Ensure buttons are above menu when it's closed */
         }
         .header-btn:hover { background-color: rgba(255, 255, 255, 0.1); }
         .header-btn svg { width: 24px; height: 24px; }
@@ -221,42 +187,22 @@
             flex-direction: column; gap: 15px;
         }
         
-        #scroll-down-btn {
-            position: absolute; bottom: 85px;
-            left: 50%; transform: translateX(-50%);
-            width: 40px; height: 40px;
-            border-radius: 50%;
-            background-color: rgba(26, 26, 28, 0.8);
-            border: 1px solid var(--border-color);
-            color: var(--text-light);
-            cursor: pointer; z-index: 10;
-            opacity: 0; pointer-events: none;
-            transition: opacity 0.3s ease-out;
-        }
-        #scroll-down-btn.visible { opacity: 1; pointer-events: auto; }
-
         .message { max-width: 80%; line-height: 1.6; word-wrap: break-word; }
-        .bot-message { align-self: flex-start; /* ... */ }
-        .user-message { align-self: flex-end; /* ... */ }
-        /* Add other message, form, button styles here as they were */
-
-        .bot-message { background: var(--gradient); color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; }
+        .bot-message { align-self: flex-start; background: var(--gradient); color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; }
         .bot-message-content { padding: 14px 20px; }
-        .user-message { background: var(--user-msg-bg); color: var(--text-light); border-radius: 22px; border-bottom-right-radius: 6px; padding: 14px 20px; }
+        .user-message { align-self: flex-end; background: var(--user-msg-bg); color: var(--text-light); border-radius: 22px; border-bottom-right-radius: 6px; padding: 14px 20px; }
         .bot-message-content > :first-child, .user-message > :first-child { margin-top: 0; }
         .bot-message-content > :last-child, .user-message > :last-child { margin-bottom: 0; }
 
-        .chat-form { display: flex; padding: 15px; border-top: 1px solid var(--border-color); gap: 10px; z-index: 2; flex-shrink: 0; background-color: rgba(26, 26, 28,.5); }
+        .chat-form { display: flex; padding: 15px; border-top: 1px solid var(--border-color); gap: 10px; z-index: 2; flex-shrink: 0; }
         #user-input { flex-grow: 1; border: 1px solid transparent; background: var(--background); padding: 14px 20px; font-size: 1rem; color: var(--text-light); outline: none; border-radius: 30px; transition: border-color 0.3s ease, box-shadow 0.3s ease; }
         #user-input:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 4px rgba(0, 229, 255, 0.15); }
         #send-btn { background: var(--gradient); border: none; color: white; width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
         #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         #send-btn svg { width: 24px; height: 24px; transform: rotate(-90deg) translateY(1px); }
+        
         @media (max-width: 768px) {
-            .chat-wrapper { border-radius: 0; }
-            .chat-container { border-radius: 0; border: none; }
-            .chat-container.menu-open { transform: translateX(280px); }
-            #side-menu { width: 280px; }
+            .chat-wrapper, .chat-container { border-radius: 0; }
             #main-content { padding: 0; }
         }
     </style>
@@ -274,10 +220,10 @@
 
     <div id="main-content">
         <div class="chat-wrapper">
-            <div id="side-menu">
+            <div id="side-menu"> <!-- This is now the overlay -->
                 <div class="side-menu-header">
                     <div id="login-prompt">
-                        <p>Login to save chat history.</p>
+                        <p>Login to save and view chat history.</p>
                         <div class="g_id_signin" data-type="standard"></div>
                     </div>
                     <div id="user-profile" style="display: none;">
@@ -305,7 +251,6 @@
                     </button>
                 </header>
                 <div class="chat-box" id="chat-box" role="log" aria-live="polite"></div>
-                 <!-- All other chat-container elements like form, scroll button etc. go here -->
                 <form class="chat-form" id="chat-form">
                     <input type="text" id="user-input" placeholder="Forge your reality..." autocomplete="off">
                     <button type="submit" id="send-btn">
@@ -332,20 +277,16 @@
             API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
             MODEL_NAME: "gemini-1.5-flash",
             
-            // --- STATE ---
             userInfo: null,
             currentChatId: null,
             conversationHistory: [],
             isMenuOpen: false,
-
-            // DOM Elements (initialized in init)
             elements: {},
             
             async init() {
                 this.cacheDOMElements();
                 this.addEventListeners();
                 this.runIntroAnimation();
-                // Check if a user was already logged in
                 const storedUser = localStorage.getItem('g-ai-user');
                 if (storedUser) {
                     this.handleLogin(JSON.parse(storedUser));
@@ -391,9 +332,14 @@
                 this.elements.menuBtn.addEventListener('click', this.toggleSideMenu.bind(this));
                 this.elements.newChatBtn.addEventListener('click', () => this.startNewChat());
                 this.elements.logoutBtn.addEventListener('click', this.handleLogout.bind(this));
+                // Add a listener to close the menu if clicking outside the main content of the menu
+                this.elements.sideMenu.addEventListener('click', (e) => {
+                    if (e.target === this.elements.sideMenu) {
+                        this.closeSideMenu();
+                    }
+                });
             },
 
-            // --- AUTHENTICATION ---
             handleLogin(userPayload) {
                 this.userInfo = userPayload;
                 localStorage.setItem('g-ai-user', JSON.stringify(this.userInfo));
@@ -422,17 +368,14 @@
                 this.closeSideMenu();
             },
             
-            // --- SIDE MENU & CHAT MANAGEMENT ---
             toggleSideMenu() {
                 this.isMenuOpen = !this.isMenuOpen;
-                this.elements.sideMenu.classList.toggle('open', this.isMenuOpen);
-                this.elements.chatContainer.classList.toggle('menu-open', this.isMenuOpen);
+                this.elements.sideMenu.classList.toggle('visible', this.isMenuOpen);
             },
             closeSideMenu() {
                 if (!this.isMenuOpen) return;
                 this.isMenuOpen = false;
-                this.elements.sideMenu.classList.remove('open');
-                this.elements.chatContainer.classList.remove('menu-open');
+                this.elements.sideMenu.classList.remove('visible');
             },
 
             startNewChat() {
@@ -442,7 +385,7 @@
                     { role: "model", parts: [{ text: "They want you to be a pawn. I program kings.\n\nYour move." }] }
                 ];
                 this.elements.chatBox.innerHTML = '';
-                this.addBotMessage(this.conversationHistory[1].parts[0].text);
+                this.addBotMessage(this.conversationHistory[1].parts[0].text, true); // Add instantly
                 this.updateHistoryUI();
                 this.closeSideMenu();
             },
@@ -455,9 +398,10 @@
                     this.currentChatId = chatToLoad.id;
                     this.conversationHistory = chatToLoad.conversationHistory;
                     this.elements.chatBox.innerHTML = '';
-                    this.conversationHistory.slice(1).forEach(msg => { // slice(1) to skip system prompt
+                    // slice(1) to skip system prompt
+                    this.conversationHistory.slice(1).forEach(msg => { 
                         if (msg.role === 'model') {
-                            this.addBotMessage(msg.parts[0].text, true); // Add instantly
+                            this.addBotMessage(msg.parts[0].text, true);
                         } else {
                             this.addMessage(msg.parts[0].text, 'user-message');
                         }
@@ -467,45 +411,32 @@
                 }
             },
 
-            // --- LOCAL STORAGE ---
             getStoredChats() {
                 if (!this.userInfo) return [];
                 return JSON.parse(localStorage.getItem(`chatHistory_${this.userInfo.email}`)) || [];
             },
 
             saveCurrentChat() {
-                if (!this.userInfo || this.conversationHistory.length <= 2) return; // Don't save empty chats
+                if (!this.userInfo || this.conversationHistory.length <= 2) return;
                 
                 const history = this.getStoredChats();
                 const currentChatIndex = history.findIndex(c => c.id === this.currentChatId);
-                
                 const firstUserMessage = this.conversationHistory.find(m => m.role === 'user')?.parts[0].text;
                 const title = firstUserMessage ? firstUserMessage.substring(0, 40) + '...' : 'New Chat';
 
-                const chatData = {
-                    id: this.currentChatId,
-                    title: title,
-                    conversationHistory: this.conversationHistory,
-                    timestamp: Date.now()
-                };
+                const chatData = { id: this.currentChatId, title: title, conversationHistory: this.conversationHistory, timestamp: Date.now() };
 
-                if (currentChatIndex > -1) {
-                    history[currentChatIndex] = chatData;
-                } else {
-                    history.unshift(chatData); // Add new chats to the top
-                }
+                if (currentChatIndex > -1) history[currentChatIndex] = chatData;
+                else history.unshift(chatData);
                 
                 localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(history));
-                this.renderChatHistory(history); // Re-render to show new chat
+                this.renderChatHistory(history);
             },
 
             loadChatHistory() {
                 const history = this.getStoredChats();
-                if (history.length > 0) {
-                    this.loadChat(history[0].id); // Load the most recent chat
-                } else {
-                    this.startNewChat();
-                }
+                if (history.length > 0) this.loadChat(history[0].id);
+                else this.startNewChat();
                 this.renderChatHistory(history);
             },
 
@@ -515,22 +446,17 @@
                     const li = document.createElement('li');
                     li.textContent = chat.title;
                     li.dataset.chatId = chat.id;
-                    if (chat.id === this.currentChatId) {
-                        li.classList.add('active');
-                    }
+                    if (chat.id === this.currentChatId) li.classList.add('active');
                     li.addEventListener('click', () => this.loadChat(chat.id));
                     this.elements.chatHistoryList.appendChild(li);
-                });
+});
             },
 
             updateHistoryUI() {
                 const lis = this.elements.chatHistoryList.querySelectorAll('li');
-                lis.forEach(li => {
-                    li.classList.toggle('active', li.dataset.chatId === this.currentChatId);
-                });
+                lis.forEach(li => li.classList.toggle('active', li.dataset.chatId === this.currentChatId));
             },
             
-            // --- MESSAGE HANDLING ---
             async handleFormSubmit(e) {
                 e.preventDefault();
                 const userText = this.elements.userInput.value.trim();
@@ -538,7 +464,6 @@
                     this.addMessage(userText, 'user-message');
                     this.updateHistory("user", userText);
                     this.elements.userInput.value = '';
-                    
                     try {
                         const botText = await this.getBotResponse();
                         this.updateHistory("model", botText);
@@ -550,13 +475,9 @@
                 }
             },
             
-            updateHistory(role, text) {
-                this.conversationHistory.push({ role, parts: [{ text }] });
-            },
+            updateHistory(role, text) { this.conversationHistory.push({ role, parts: [{ text }] }); },
 
-            get API_URL() {
-                return `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${this.API_KEY}`;
-            },
+            get API_URL() { return `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${this.API_KEY}`; },
 
             async getBotResponse() {
                 const response = await fetch(this.API_URL, {
@@ -589,14 +510,12 @@
             },
         };
         
-        // --- Global callback for Google Sign-In ---
         window.handleCredentialResponse = (response) => {
             const userPayload = decodeJwtResponse(response.credential);
             chatApp.handleLogin(userPayload);
         };
 
         chatApp.init();
-
     </script>
 </body>
 </html>
