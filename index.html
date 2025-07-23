@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- ⬇️ IMPORTANT: PASTE YOUR GOOGLE CLIENT ID HERE ⬇️ -->
+    <!-- ⬇️ PASTE YOUR REAL GOOGLE CLIENT ID HERE. THIS IS THE FIX. ⬇️ -->
     <meta name="google-signin-client_id" content="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com">
     <title>G-AI 👑</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -92,7 +92,7 @@
         #logout-btn:hover { color: var(--text-light); }
         #chat-history-container { flex-grow: 1; overflow-y: auto; }
         #chat-history-container h3 { margin-bottom: 15px; font-size: 1.1rem; color: var(--text-dark); }
-        #chat-history-list { list-style: none; }
+        #chat-history-list { list-style: none; padding:0; }
         #chat-history-list li {
             padding: 12px 15px; margin-bottom: 8px; border-radius: 8px;
             cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -178,7 +178,11 @@
     </style>
 </head>
 <body>
-    <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com" data-callback="handleCredentialResponse" data-auto_select="true"></div>
+    <div id="g_id_onload" 
+         data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse"
+         data-auto_select="true">
+    </div>
 
     <div id="logo-animation-container"><div id="logo-transformer">G-AI</div></div>
 
@@ -261,7 +265,7 @@
                 if (storedUser) {
                     this.handleLogin(JSON.parse(storedUser));
                 } else {
-                    this.startNewChat(false); // Silently init the first chat data
+                    this.startNewChat(false);
                 }
                 this.runIntroAnimation();
             },
@@ -304,7 +308,6 @@
                     this.elements.animationContainer.style.opacity = '0';
                     this.elements.mainContent.classList.add('visible');
                     this.elements.animationContainer.addEventListener('transitionend', () => this.elements.animationContainer.style.display = 'none', { once: true });
-                    // Only render the first message via the animation
                     setTimeout(() => {
                         if (this.conversationHistory.length > 1) {
                            this.addBotMessage(this.conversationHistory[1].parts[0].text);
@@ -320,9 +323,8 @@
                 this.elements.menuBtn.addEventListener('click', this.toggleSideMenu.bind(this));
                 this.elements.newChatBtn.addEventListener('click', () => this.startNewChat(true));
                 this.elements.logoutBtn.addEventListener('click', this.handleLogout.bind(this));
-                // Click on the main chat area to close the menu
                 this.elements.chatContainer.addEventListener('click', () => {
-                    if(this.isMenuOpen) this.closeSideMenu();
+                    if (this.isMenuOpen) this.closeSideMenu();
                 });
             },
 
@@ -369,7 +371,7 @@
                 ];
                 this.elements.chatBox.innerHTML = '';
                 if (renderMessage) {
-                    this.addBotMessage(this.conversationHistory[1].parts[0].text, true); // Add instantly
+                    this.addBotMessage(this.conversationHistory[1].parts[0].text, true);
                 }
                 this.updateHistoryUI();
                 this.closeSideMenu();
