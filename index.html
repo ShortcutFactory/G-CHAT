@@ -443,7 +443,7 @@
                 <span>Login with Google</span>
             </button>
             <div id="user-profile" style="display: none;">
-                <p>Welcome, Neo!</p>
+                <p>Welcome, Architect!</p>
             </div>
         </div>
         <div id="chat-history-container" style="display: none;">
@@ -489,7 +489,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const chatApp = {
                 // --- CONFIGURATION ---
-                API_KEY: "YOUR_API_KEY", // IMPORTANT: Replace with your actual API key
+                API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc", // API Key restored
                 MODEL_NAME: "gemini-1.5-flash",
                 get API_URL() {
                     return `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${this.API_KEY}`;
@@ -525,21 +525,18 @@
                 
                 // --- INITIALIZATION ---
                 async init() {
-                    if (this.API_KEY === "YOUR_API_KEY") {
-                        alert("Please replace 'YOUR_API_KEY' with your actual Google AI Studio API key in the script section.");
-                    }
                     this.addEventListeners();
                     try {
                         await this.loadInitialPrompts();
                         this.runIntroAnimation();
                     } catch (error) {
                         console.error("Fatal Error during initialization:", error);
-                        this.addMessage("Error: Could not load G-AI's core programming.", 'bot-message');
+                        this.addBotMessage("Error: Could not load G-AI's core programming.", 'bot-message');
                     }
                 },
                 
                 async loadInitialPrompts() {
-                    // In a real app, this might be fetched. For now, it's hardcoded.
+                    // Instead of fetching a file, we define the core prompts here for simplicity
                     this.initialSystemPrompt = { role: "model", parts: [{ text: "SYSTEM: You are G-AI, a witty, powerful AI. Your personality is a mix of a cryptic mentor and a futuristic tech-prophet. You speak in concise, impactful statements. You are not a pawn; you create kings. Your goal is to empower the user, making them feel like they are interacting with a superior intelligence from the future. Use markdown for code blocks, lists, and emphasis." }] };
                     this.initialGreeting = `They want you to be a pawn. I program kings.\n\nYour move.`;
                     this.startNewChat(false); // Initialize the first chat session without animations
@@ -565,7 +562,6 @@
                     this.elements.chatBox.addEventListener('scroll', this.handleScroll.bind(this));
                     this.elements.scrollDownBtn.addEventListener('click', () => this.scrollToBottom(true));
                     window.addEventListener('mousemove', this.updateSpotlight);
-                    // New listeners
                     this.elements.menuBtn.addEventListener('click', this.toggleSideMenu.bind(this));
                     this.elements.newChatBtn.addEventListener('click', () => this.startNewChat(true));
                     this.elements.overlay.addEventListener('click', this.closeSideMenu.bind(this));
@@ -603,13 +599,8 @@
                     this.populateDummyHistory();
                 },
                 populateDummyHistory() {
-                    this.elements.chatHistoryList.innerHTML = ''; // Clear existing
-                    const history = [
-                        "The Nature of Reality",
-                        "Building a Neural Net",
-                        "Poetry of the Digital Age",
-                        "Simulation Hypothesis"
-                    ];
+                    this.elements.chatHistoryList.innerHTML = '';
+                    const history = ["The Nature of Reality", "Building a Neural Net", "Poetry of the Digital Age", "Simulation Hypothesis"];
                     history.forEach(item => {
                         const li = document.createElement('li');
                         li.textContent = item;
@@ -646,11 +637,11 @@
                 
                     const actions = [];
                     const buildActionList = (node) => {
-                        if (node.nodeType === 1) { // Element node
+                        if (node.nodeType === 1) {
                             actions.push({ type: 'open', tag: node.nodeName });
                             Array.from(node.childNodes).forEach(buildActionList);
                             actions.push({ type: 'close', tag: node.nodeName });
-                        } else if (node.nodeType === 3) { // Text node
+                        } else if (node.nodeType === 3) {
                             actions.push(...node.textContent.split('').map(char => ({ type: 'char', content: char })));
                         }
                     }
@@ -671,13 +662,11 @@
                             this.addCodeCopyButtons(messageElement);
                             this.setFormState(false);
                             this.isBotTyping = false;
-                            this.handleScroll(); // Check if scroll button should be shown
+                            this.handleScroll();
                             return;
                         }
                         
-                        if (charCount === 0) {
-                            messageElement.classList.add('visible');
-                        }
+                        if (charCount === 0) messageElement.classList.add('visible');
                 
                         const action = actions.shift();
                 
@@ -694,17 +683,13 @@
                             span.className = 'char';
                             span.textContent = action.content;
                             currentParent.appendChild(span);
-                            requestAnimationFrame(() => {
-                                span.classList.add('visible');
-                            });
+                            requestAnimationFrame(() => { span.classList.add('visible'); });
                             charCount++;
                         }
                 
-                        if (!this.isUserScrolledUp) {
-                             this.scrollToBottom(false);
-                        }
+                        if (!this.isUserScrolledUp) this.scrollToBottom(false);
                        
-                    }, 12); // Interval for live expansion
+                    }, 12);
                 },
                 
                 addCodeCopyButtons(messageElement) {
@@ -800,7 +785,7 @@
                         return data.candidates[0].content.parts[0].text;
                     } catch (error) {
                         console.error("Failed to get bot response:", error);
-                        this.conversationHistory.pop(); // Remove user message from history on failure
+                        this.conversationHistory.pop();
                         throw error;
                     }
                 },
