@@ -159,37 +159,36 @@
         }
         @keyframes slideInUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- NEW ANIMATION STYLES --- */
+        /* --- FINAL ANIMATION --- */
         .bot-message-content .reveal-word {
             display: inline-block;
             background: var(--gradient);
-            background-size: 150%;
+            background-size: 300% 100%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             opacity: 0;
-            animation-name: gradient-wipe-and-settle;
-            animation-duration: 1000ms;
-            animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1);
+            animation-name: gradient-wave;
+            animation-duration: 1200ms;
+            animation-timing-function: ease-out;
             animation-fill-mode: forwards;
         }
 
-        @keyframes gradient-wipe-and-settle {
+        @keyframes gradient-wave {
             0% {
                 opacity: 0;
-                filter: blur(5px);
-                transform: translateY(10px);
+                filter: blur(4px);
+                background-position: 100% 50%;
                 -webkit-text-fill-color: transparent;
             }
-            40% {
+            30% {
                 opacity: 1;
                 filter: blur(0);
-                transform: translateY(0);
                 -webkit-text-fill-color: transparent;
             }
-            90%, 100% {
+            100% {
                 opacity: 1;
                 filter: blur(0);
-                transform: translateY(0);
+                background-position: 0% 50%;
                 -webkit-text-fill-color: white; 
             }
         }
@@ -569,7 +568,6 @@
                 this.scrollToBottom(false);
             },
             
-            // --- REFINED FUNCTION ---
             addBotMessage(markdownText, instant = false) {
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message bot-message';
@@ -618,14 +616,15 @@
                 
                 const wordsToReveal = contentWrapper.querySelectorAll('.reveal-word');
                 if (wordsToReveal.length === 0) {
+                    contentWrapper.innerHTML = marked.parse(markdownText); // Ensure content is visible even if no words to animate
                     this.isBotTyping = false;
                     this.setFormState(false);
                     return;
                 }
 
                 let totalDelay = 0;
-                const delayIncrement = 40;
-                const animationDuration = 1000; // Must match CSS
+                const delayIncrement = 50; // Stagger start time for each word
+                const animationDuration = 1200; // Must match CSS
                 
                 wordsToReveal.forEach(span => {
                     span.style.animationDelay = `${totalDelay}ms`;
@@ -641,7 +640,7 @@
                 
                 setTimeout(() => {
                     clearInterval(this.rendererInterval);
-                    contentWrapper.innerHTML = marked.parse(markdownText);
+                    contentWrapper.innerHTML = marked.parse(markdownText); // Final cleanup for text selectability
                     this.isBotTyping = false;
                     this.setFormState(false);
                     this.handleScroll();
