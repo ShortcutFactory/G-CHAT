@@ -162,60 +162,38 @@
         /* --- NEW ANIMATION STYLES --- */
         .bot-message-content .reveal-word {
             display: inline-block;
-            position: relative;
-            
-            /* Start transparent, animation will make it visible */
-            color: transparent;
-            
-            /* Animation applied via JS */
-            opacity: 0;
-            filter: blur(8px);
-        }
-
-        .bot-message-content .reveal-word::before {
-            content: attr(data-word);
-            position: absolute;
-            top: 0;
-            left: 0;
-            
-            /* The gradient wave */
             background: var(--gradient);
+            background-size: 150%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            
-            /* Animation will unclip this */
-            clip-path: inset(0 100% 0 0);
+            opacity: 0;
+            animation-name: gradient-wipe-and-settle;
+            animation-duration: 1000ms;
+            animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1);
+            animation-fill-mode: forwards;
         }
 
-        @keyframes wave-reveal {
+        @keyframes gradient-wipe-and-settle {
             0% {
                 opacity: 0;
-                filter: blur(8px);
+                filter: blur(5px);
                 transform: translateY(10px);
-                color: transparent;
+                -webkit-text-fill-color: transparent;
             }
-            30% {
-                filter: blur(2px);
-                color: transparent;
-            }
-            50% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            100% {
+            40% {
                 opacity: 1;
                 filter: blur(0);
                 transform: translateY(0);
-                color: white; /* Final text color */
+                -webkit-text-fill-color: transparent;
+            }
+            90%, 100% {
+                opacity: 1;
+                filter: blur(0);
+                transform: translateY(0);
+                -webkit-text-fill-color: white; 
             }
         }
         
-        @keyframes wave-clip {
-            0% { clip-path: inset(0 100% 0 0); }
-            50% { clip-path: inset(0 0% 0 0); }
-            100% { clip-path: inset(0 0% 0 0); }
-        }
-
         .typing-indicator-bubble {
             align-self: flex-start; background: var(--gradient);
             border-radius: 22px; border-bottom-left-radius: 6px; padding: 14px 20px;
@@ -490,7 +468,7 @@
                     this.conversationHistory = chatToLoad.conversationHistory;
                     this.elements.chatBox.innerHTML = '';
                     
-                    this.conversationHistory.slice(1).forEach(msg => {
+                    this.conversationHistory.slice(1).forEach(msg => { // slice(1) to skip system prompt
                         const text = msg.parts[0].text;
                         if (msg.role === 'model') this.addBotMessage(text, true);
                         else if (msg.role === 'user') this.addMessage(text, 'user-message');
@@ -532,9 +510,9 @@
             loadUserChats() {
                 const allChats = this.getStoredChats();
                 if (allChats.length > 0) {
-                    this.loadChat(allChats[0].id);
+                    this.loadChat(allChats[0].id); // Load the most recent chat
                 } else {
-                    this.startNewChat(true);
+                    this.startNewChat(true); // Start a new chat if none exist
                 }
                 this.renderChatHistory(allChats);
             },
@@ -564,6 +542,7 @@
                     this.addMessage(userText, 'user-message');
                     this.updateHistory("user", userText);
                     this.elements.userInput.value = '';
+                    this.setFormState(true);
                     
                     this.saveCurrentChat(); 
                     this.toggleTypingIndicator(true);
@@ -590,7 +569,7 @@
                 this.scrollToBottom(false);
             },
             
-            // --- REFINED ANIMATION FUNCTION ---
+            // --- REFINED FUNCTION ---
             addBotMessage(markdownText, instant = false) {
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message bot-message';
@@ -611,9 +590,8 @@
                 this.setFormState(true);
                 messageEl.classList.add('visible');
                 
-                const finalHtml = marked.parse(markdownText);
                 const tempContainer = document.createElement('div');
-                tempContainer.innerHTML = finalHtml;
+                tempContainer.innerHTML = marked.parse(markdownText);
 
                 function wrapTextNodes(node) {
                     if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
@@ -624,7 +602,6 @@
                                 const span = document.createElement('span');
                                 span.className = 'reveal-word';
                                 span.textContent = word;
-                                span.setAttribute('data-word', word); // for pseudo-element
                                 fragment.appendChild(span);
                             } else {
                                 fragment.appendChild(document.createTextNode(word));
@@ -641,36 +618,17 @@
                 
                 const wordsToReveal = contentWrapper.querySelectorAll('.reveal-word');
                 if (wordsToReveal.length === 0) {
-                    contentWrapper.innerHTML = finalHtml;
                     this.isBotTyping = false;
                     this.setFormState(false);
                     return;
                 }
 
                 let totalDelay = 0;
-                const delayIncrement = 50; // ms
-                const mainAnimDuration = 1000; // ms
-                const clipAnimDuration = 600; // ms
-
+                const delayIncrement = 40;
+                const animationDuration = 1000; // Must match CSS
+                
                 wordsToReveal.forEach(span => {
-                    const before = window.getComputedStyle(span, '::before');
-                    span.style.animation = `wave-reveal ${mainAnimDuration}ms ease-out forwards`;
                     span.style.animationDelay = `${totalDelay}ms`;
-                    
-                    // This is a trick: we can't directly animate a pseudo-element
-                    // So we create a separate class to trigger its animation
-                    setTimeout(() => {
-                        const pseudoSpan = document.createElement('style');
-                        pseudoSpan.innerHTML = `
-                        .bot-message-content .reveal-word[data-word="${span.dataset.word}"]::before {
-                            animation: wave-clip ${clipAnimDuration}ms ease-out forwards ${totalDelay}ms;
-                        }`;
-                        document.head.appendChild(pseudoSpan);
-                        // Clean up the style tag after animation
-                        setTimeout(() => pseudoSpan.remove(), totalDelay + clipAnimDuration + 50);
-
-                    }, totalDelay);
-
                     totalDelay += delayIncrement;
                 });
                 
@@ -679,11 +637,11 @@
                     if (!this.isUserScrolledUp) this.scrollToBottom(false);
                 }, 100);
 
-                const totalAnimationTime = totalDelay + mainAnimDuration;
+                const totalAnimationTime = totalDelay + animationDuration;
                 
                 setTimeout(() => {
                     clearInterval(this.rendererInterval);
-                    contentWrapper.innerHTML = finalHtml;
+                    contentWrapper.innerHTML = marked.parse(markdownText);
                     this.isBotTyping = false;
                     this.setFormState(false);
                     this.handleScroll();
@@ -693,7 +651,6 @@
             toggleTypingIndicator(show) {
                 if (show) {
                     if (this.typingIndicatorRef) return;
-                    this.setFormState(true);
                     const el = document.createElement('div');
                     el.className = 'message typing-indicator-bubble';
                     el.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
