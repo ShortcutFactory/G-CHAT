@@ -149,47 +149,55 @@
         #scroll-down-btn svg { width: 20px; height: 20px; transform: rotate(180deg);}
 
         .message { max-width: 80%; line-height: 1.6; word-wrap: break-word; }
-        .bot-message { align-self: flex-start; background: var(--gradient); color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
-        .bot-message.visible { opacity: 1; }
-        .bot-message-content { padding: 14px 20px; }
+        .bot-message {
+            align-self: flex-start;
+            color: white;
+            border-radius: 22px;
+            border-bottom-left-radius: 6px;
+            padding: 0;
+            opacity: 0;
+            animation: fadeInMessage 0.3s ease-out forwards;
+        }
+        @keyframes fadeInMessage {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bot-message-content {
+            padding: 14px 20px;
+            background: var(--surface-alpha); /* Fallback for no animation */
+            border-radius: inherit; /* Inherit border-radius from parent */
+        }
+
+        .bot-message.animated-text .bot-message-content {
+            background: var(--gradient);
+            background-size: 200% 200%;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation:
+                revealText 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards,
+                animate-gradient 5s ease infinite;
+        }
+
+        @keyframes revealText {
+            0% {
+                filter: blur(8px);
+                background-size: 200% 200%;
+            }
+            100% {
+                color: var(--text-light);
+                filter: blur(0px);
+                background-size: 100% 100%;
+            }
+        }
+
         .user-message {
             align-self: flex-end; background: var(--user-msg-bg); color: var(--text-light);
             border-radius: 22px; border-bottom-right-radius: 6px; padding: 14px 20px;
             animation: slideInUpFade 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1;
         }
         @keyframes slideInUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        @keyframes fast-text-reveal {
-            0% {
-                filter: blur(8px);
-                opacity: 0;
-                background: var(--gradient);
-                -webkit-background-clip: text;
-                background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-size: 300% 300%;
-                background-position: 0% 50%;
-            }
-            30% {
-                -webkit-text-fill-color: transparent;
-            }
-            50% {
-                filter: blur(2px);
-                opacity: 0.8;
-            }
-            100% {
-                filter: blur(0);
-                opacity: 1;
-                background-position: 100% 50%;
-                -webkit-text-fill-color: var(--text-light);
-                -webkit-background-clip: unset;
-                background-clip: unset;
-            }
-        }
-
-        .animated-text-reveal {
-            animation: fast-text-reveal 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-        }
 
         .typing-indicator-bubble {
             align-self: flex-start; background: var(--gradient);
@@ -220,6 +228,7 @@
     </style>
 </head>
 <body>
+    <!-- The rest of the body remains unchanged -->
     <div id="beta-banner">G-AI is in beta. Some features may not work as intended.</div>
 
     <div id="g_id_onload"
@@ -238,7 +247,7 @@
                         <p>Login to save & view chat history.</p>
                         <div class="g_id_signin" data-type="standard"></div>
                     </div>
-                    <div id="user-profile" class="force-hidden">
+                    <div id="user-profile" class.bind="userInfo ? '' : 'force-hidden'">
                         <img id="user-pic" src="" alt="User profile picture">
                         <div>
                            <p id="user-name"></p>
@@ -298,7 +307,6 @@
             typingIndicatorRef: null,
             isUserScrolledUp: false,
             isBotTyping: false,
-            rendererInterval: null,
             elements: {},
 
             async init() {
@@ -431,7 +439,7 @@
             },
 
             startNewChat(renderMessage = true) {
-                if (this.isBotTyping) clearInterval(this.rendererInterval);
+                this.isBotTyping = false;
 
                 this.currentChatId = `chat_${Date.now()}`;
                 this.conversationHistory = [
@@ -568,29 +576,38 @@
                 this.scrollToBottom(false);
             },
 
-           addBotMessage(markdownText, instant = false) {
+            addBotMessage(markdownText, instant = false) {
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message bot-message';
-
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'bot-message-content';
-
-                const parsedHtml = marked.parse(markdownText);
-                contentWrapper.innerHTML = parsedHtml;
-
+                contentWrapper.innerHTML = marked.parse(markdownText);
                 messageEl.appendChild(contentWrapper);
                 this.elements.chatBox.appendChild(messageEl);
 
                 if (instant) {
                     messageEl.classList.add('visible');
+                    // No streaming animation for instant messages
                 } else {
-                    contentWrapper.classList.add('animated-text-reveal');
-                    // We add the visible class after a tiny delay to ensure the animation runs
-                    setTimeout(() => messageEl.classList.add('visible'), 50);
+                    this.isBotTyping = true;
+                    this.setFormState(true);
+                    messageEl.classList.add('animated-text');
+
+                    // The animation is now handled entirely by CSS.
+                    // We just need to know when it finishes to re-enable the form.
+                    contentWrapper.addEventListener('animationend', (e) => {
+                        // Ensure we only listen for the 'revealText' animation
+                        if (e.animationName === 'revealText') {
+                            this.isBotTyping = false;
+                            this.setFormState(false);
+                            this.handleScroll();
+                             // Clean up class to prevent re-animation on scroll
+                            messageEl.classList.remove('animated-text');
+                        }
+                    }, { once: true });
                 }
 
                 this.scrollToBottom(false);
-                this.setFormState(false);
             },
 
             toggleTypingIndicator(show) {
