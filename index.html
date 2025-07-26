@@ -151,7 +151,7 @@
         .message { max-width: 80%; line-height: 1.6; word-wrap: break-word; }
         .bot-message { align-self: flex-start; background: var(--gradient); color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
         .bot-message.visible { opacity: 1; }
-        .bot-message-content { padding: 14px 20px; }
+        .bot-message-content { padding: 14px 20px; color: white; /* Final text color */ }
         .user-message {
             align-self: flex-end; background: var(--user-msg-bg); color: var(--text-light);
             border-radius: 22px; border-bottom-right-radius: 6px; padding: 14px 20px;
@@ -162,24 +162,39 @@
         /* New styles for the advanced text animation */
         .bot-message-content .reveal-word {
             display: inline-block;
-            opacity: 0;
-            filter: blur(4px);
+            
+            /* Use a viewport-fixed gradient for a unified look across words */
             background: var(--gradient);
+            background-attachment: fixed;
+
+            /* Clip the background to the text shape */
             -webkit-background-clip: text;
+            
+            /* Start with transparent fill to show the gradient background */
             -webkit-text-fill-color: transparent;
-            animation: reveal 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+
+            /* Hide until animation starts */
+            opacity: 0;
         }
 
-        @keyframes reveal {
-            from {
+        @keyframes reveal-and-settle {
+            0% {
                 opacity: 0;
                 filter: blur(4px);
                 transform: translateY(10px);
+                -webkit-text-fill-color: transparent;
             }
-            to {
+            60% {
                 opacity: 1;
                 filter: blur(0);
                 transform: translateY(0);
+                -webkit-text-fill-color: transparent; /* Keep gradient visible */
+            }
+            100% {
+                opacity: 1;
+                filter: blur(0);
+                transform: translateY(0);
+                -webkit-text-fill-color: white; /* Settle to solid white */
             }
         }
         
@@ -546,9 +561,6 @@
                         console.error("API Call failed:", error);
                         this.toggleTypingIndicator(false);
                         this.addBotMessage("My apologies, a transmission error occurred. Please try again.", true);
-                    } finally {
-                        // The form state is now set to false inside the addBotMessage function
-                        // to ensure it only enables after the animation is complete.
                     }
                 }
             },
@@ -571,7 +583,6 @@
                 this.elements.chatBox.appendChild(messageEl);
                 this.scrollToBottom(false);
 
-                // For instant messages or pre-loading chat history
                 if (instant) {
                     contentWrapper.innerHTML = marked.parse(markdownText);
                     messageEl.classList.add('visible');
@@ -580,19 +591,15 @@
                 }
                 
                 this.isBotTyping = true;
+                this.setFormState(true);
                 messageEl.classList.add('visible');
                 
-                // 1. Convert markdown to a DOM structure
-                const parsedHtml = marked.parse(markdownText);
                 const tempContainer = document.createElement('div');
-                tempContainer.innerHTML = parsedHtml;
+                tempContainer.innerHTML = marked.parse(markdownText);
 
-                // 2. Wrap text nodes in spans for animation
                 function wrapTextNodes(node) {
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        if (node.textContent.trim() === '') return;
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
                         const fragment = document.createDocumentFragment();
-                        // Split by spaces but keep the spaces for layout
                         const words = node.textContent.split(/(\s+)/);
                         words.forEach(word => {
                             if (word.trim() !== '') {
@@ -606,7 +613,6 @@
                         });
                         node.parentNode.replaceChild(fragment, node);
                     } else {
-                        // Process children nodes recursively
                         Array.from(node.childNodes).forEach(wrapTextNodes);
                     }
                 }
@@ -614,31 +620,40 @@
                 wrapTextNodes(tempContainer);
                 contentWrapper.appendChild(tempContainer);
                 
-                // 3. Stagger the animation for each word
                 const wordsToReveal = contentWrapper.querySelectorAll('.reveal-word');
+                if (wordsToReveal.length === 0) {
+                    this.isBotTyping = false;
+                    this.setFormState(false);
+                    return;
+                }
+
                 let totalDelay = 0;
-                const delayIncrement = 30; // Time in ms between each word reveal
+                const delayIncrement = 40; 
+                const animationDuration = 800; 
                 
                 wordsToReveal.forEach(span => {
+                    span.style.animation = `reveal-and-settle ${animationDuration}ms ease-out forwards`;
                     span.style.animationDelay = `${totalDelay}ms`;
                     totalDelay += delayIncrement;
                 });
                 
-                // 4. Continuously scroll during animation
                 if (this.rendererInterval) clearInterval(this.rendererInterval);
                 this.rendererInterval = setInterval(() => {
                     if (!this.isUserScrolledUp) this.scrollToBottom(false);
                 }, 100);
 
-                // 5. Cleanup after the entire animation is complete
-                const animationDuration = 600; // Must match the CSS animation duration
                 const totalAnimationTime = totalDelay + animationDuration;
                 
                 setTimeout(() => {
                     clearInterval(this.rendererInterval);
+                    
+                    // Clean up by replacing the spans with their text content
+                    // This restores the original HTML structure from marked.parse()
+                    contentWrapper.innerHTML = tempContainer.innerHTML;
+
                     this.isBotTyping = false;
                     this.setFormState(false);
-                    this.handleScroll(); // Final check for scroll button visibility
+                    this.handleScroll();
                 }, totalAnimationTime);
             },
             
