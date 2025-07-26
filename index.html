@@ -22,6 +22,7 @@
             --user-msg-bg: #2c2c2e;
             --code-bg: #101013;
             --gradient: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
+            --final-text-color: white;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -149,9 +150,9 @@
         #scroll-down-btn svg { width: 20px; height: 20px; transform: rotate(180deg);}
 
         .message { max-width: 80%; line-height: 1.6; word-wrap: break-word; }
-        .bot-message { align-self: flex-start; background: var(--gradient); color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
+        .bot-message { align-self: flex-start; background: var(--gradient); color: var(--final-text-color); border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
         .bot-message.visible { opacity: 1; }
-        .bot-message-content { padding: 14px 20px; color: white; }
+        .bot-message-content { padding: 14px 20px; color: var(--final-text-color); }
         .user-message {
             align-self: flex-end; background: var(--user-msg-bg); color: var(--text-light);
             border-radius: 22px; border-bottom-right-radius: 6px; padding: 14px 20px;
@@ -159,37 +160,58 @@
         }
         @keyframes slideInUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- FINAL ANIMATION --- */
+        /* --- NEW ANIMATION STYLES --- */
         .bot-message-content .reveal-word {
             display: inline-block;
-            background: var(--gradient);
+            /* The text is initially transparent, so we see the gradient background */
+            color: transparent;
+            
+            /* The gradient is much wider than the word. It's white, then the color wave, then white again. */
+            background: linear-gradient(90deg, 
+                var(--final-text-color) 0%, 
+                var(--final-text-color) 40%, 
+                var(--accent-purple) 50%, 
+                var(--accent-cyan) 60%, 
+                var(--final-text-color) 70%,
+                var(--final-text-color) 100%
+            );
             background-size: 300% 100%;
+            background-position: 100% 0; /* Start with the gradient off-screen to the right */
+            
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            
             opacity: 0;
-            animation-name: gradient-wave;
+            filter: blur(4px);
+            transform: translateY(10px);
+            
+            animation-name: scan-and-settle;
             animation-duration: 1200ms;
-            animation-timing-function: ease-out;
+            animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
             animation-fill-mode: forwards;
         }
 
-        @keyframes gradient-wave {
+        @keyframes scan-and-settle {
             0% {
                 opacity: 0;
                 filter: blur(4px);
-                background-position: 100% 50%;
-                -webkit-text-fill-color: transparent;
+                transform: translateY(10px);
             }
-            30% {
+            25% {
                 opacity: 1;
                 filter: blur(0);
-                -webkit-text-fill-color: transparent;
+                transform: translateY(0);
+            }
+            25%, 85% {
+                /* Animate the background position to "scan" the gradient across the text */
+                background-position: 0% 0;
             }
             100% {
+                /* The color fades in, covering the gradient background, which is now off-screen */
+                color: var(--final-text-color);
                 opacity: 1;
                 filter: blur(0);
-                background-position: 0% 50%;
-                -webkit-text-fill-color: white; 
+                transform: translateY(0);
             }
         }
         
@@ -568,6 +590,7 @@
                 this.scrollToBottom(false);
             },
             
+            // --- REFINED FUNCTION ---
             addBotMessage(markdownText, instant = false) {
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message bot-message';
@@ -577,8 +600,10 @@
                 this.elements.chatBox.appendChild(messageEl);
                 this.scrollToBottom(false);
 
+                const finalHtml = marked.parse(markdownText);
+
                 if (instant) {
-                    contentWrapper.innerHTML = marked.parse(markdownText);
+                    contentWrapper.innerHTML = finalHtml;
                     messageEl.classList.add('visible');
                     this.setFormState(false);
                     return;
@@ -589,7 +614,7 @@
                 messageEl.classList.add('visible');
                 
                 const tempContainer = document.createElement('div');
-                tempContainer.innerHTML = marked.parse(markdownText);
+                tempContainer.innerHTML = finalHtml;
 
                 function wrapTextNodes(node) {
                     if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
@@ -616,7 +641,6 @@
                 
                 const wordsToReveal = contentWrapper.querySelectorAll('.reveal-word');
                 if (wordsToReveal.length === 0) {
-                    contentWrapper.innerHTML = marked.parse(markdownText); // Ensure content is visible even if no words to animate
                     this.isBotTyping = false;
                     this.setFormState(false);
                     return;
@@ -624,7 +648,7 @@
 
                 let totalDelay = 0;
                 const delayIncrement = 50; // Stagger start time for each word
-                const animationDuration = 1200; // Must match CSS
+                const animationDuration = 1200; // Must match CSS animation duration
                 
                 wordsToReveal.forEach(span => {
                     span.style.animationDelay = `${totalDelay}ms`;
@@ -640,7 +664,8 @@
                 
                 setTimeout(() => {
                     clearInterval(this.rendererInterval);
-                    contentWrapper.innerHTML = marked.parse(markdownText); // Final cleanup for text selectability
+                    // Replace the complex animated spans with the clean, final HTML
+                    contentWrapper.innerHTML = finalHtml;
                     this.isBotTyping = false;
                     this.setFormState(false);
                     this.handleScroll();
