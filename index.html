@@ -151,7 +151,7 @@
         .message { max-width: 80%; line-height: 1.6; word-wrap: break-word; }
         .bot-message { align-self: flex-start; background: var(--gradient); color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
         .bot-message.visible { opacity: 1; }
-        .bot-message-content { padding: 14px 20px; color: white; /* Final text color */ }
+        .bot-message-content { padding: 14px 20px; color: white; }
         .user-message {
             align-self: flex-end; background: var(--user-msg-bg); color: var(--text-light);
             border-radius: 22px; border-bottom-right-radius: 6px; padding: 14px 20px;
@@ -159,30 +159,63 @@
         }
         @keyframes slideInUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- New animation styles --- */
-        @keyframes wave-fade {
-            from { background-position: -100% 0, 0 0; }
-            to   { background-position: 100% 0, 0 0; }
+        /* --- NEW ANIMATION STYLES --- */
+        .bot-message-content .reveal-word {
+            display: inline-block;
+            position: relative;
+            
+            /* Start transparent, animation will make it visible */
+            color: transparent;
+            
+            /* Animation applied via JS */
+            opacity: 0;
+            filter: blur(8px);
         }
 
-        .animated-text-content {
-            background-image: 
-                linear-gradient(90deg, var(--accent-purple), var(--accent-cyan)), /* Top layer: The moving gradient */
-                linear-gradient(90deg, white, white); /* Bottom layer: The static final color */
+        .bot-message-content .reveal-word::before {
+            content: attr(data-word);
+            position: absolute;
+            top: 0;
+            left: 0;
             
-            background-size: 50% 100%, 100% 100%;
-            background-repeat: no-repeat;
-            
+            /* The gradient wave */
+            background: var(--gradient);
             -webkit-background-clip: text;
-            background-clip: text;
-            
             -webkit-text-fill-color: transparent;
+            
+            /* Animation will unclip this */
+            clip-path: inset(0 100% 0 0);
+        }
 
-            animation-name: wave-fade;
-            animation-timing-function: linear;
-            animation-fill-mode: forwards;
+        @keyframes wave-reveal {
+            0% {
+                opacity: 0;
+                filter: blur(8px);
+                transform: translateY(10px);
+                color: transparent;
+            }
+            30% {
+                filter: blur(2px);
+                color: transparent;
+            }
+            50% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 1;
+                filter: blur(0);
+                transform: translateY(0);
+                color: white; /* Final text color */
+            }
         }
         
+        @keyframes wave-clip {
+            0% { clip-path: inset(0 100% 0 0); }
+            50% { clip-path: inset(0 0% 0 0); }
+            100% { clip-path: inset(0 0% 0 0); }
+        }
+
         .typing-indicator-bubble {
             align-self: flex-start; background: var(--gradient);
             border-radius: 22px; border-bottom-left-radius: 6px; padding: 14px 20px;
@@ -457,7 +490,7 @@
                     this.conversationHistory = chatToLoad.conversationHistory;
                     this.elements.chatBox.innerHTML = '';
                     
-                    this.conversationHistory.slice(1).forEach(msg => { // slice(1) to skip system prompt
+                    this.conversationHistory.slice(1).forEach(msg => {
                         const text = msg.parts[0].text;
                         if (msg.role === 'model') this.addBotMessage(text, true);
                         else if (msg.role === 'user') this.addMessage(text, 'user-message');
@@ -499,9 +532,9 @@
             loadUserChats() {
                 const allChats = this.getStoredChats();
                 if (allChats.length > 0) {
-                    this.loadChat(allChats[0].id); // Load the most recent chat
+                    this.loadChat(allChats[0].id);
                 } else {
-                    this.startNewChat(true); // Start a new chat if none exist
+                    this.startNewChat(true);
                 }
                 this.renderChatHistory(allChats);
             },
@@ -531,7 +564,6 @@
                     this.addMessage(userText, 'user-message');
                     this.updateHistory("user", userText);
                     this.elements.userInput.value = '';
-                    this.setFormState(true);
                     
                     this.saveCurrentChat(); 
                     this.toggleTypingIndicator(true);
@@ -558,7 +590,7 @@
                 this.scrollToBottom(false);
             },
             
-            // --- MODIFIED FUNCTION ---
+            // --- REFINED ANIMATION FUNCTION ---
             addBotMessage(markdownText, instant = false) {
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message bot-message';
@@ -568,10 +600,8 @@
                 this.elements.chatBox.appendChild(messageEl);
                 this.scrollToBottom(false);
 
-                const parsedHtml = marked.parse(markdownText);
-
                 if (instant) {
-                    contentWrapper.innerHTML = parsedHtml;
+                    contentWrapper.innerHTML = marked.parse(markdownText);
                     messageEl.classList.add('visible');
                     this.setFormState(false);
                     return;
@@ -580,40 +610,90 @@
                 this.isBotTyping = true;
                 this.setFormState(true);
                 messageEl.classList.add('visible');
+                
+                const finalHtml = marked.parse(markdownText);
+                const tempContainer = document.createElement('div');
+                tempContainer.innerHTML = finalHtml;
 
-                const textContentForEst = document.createElement('div');
-                textContentForEst.innerHTML = parsedHtml;
-                const numChars = textContentForEst.textContent.length;
+                function wrapTextNodes(node) {
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
+                        const fragment = document.createDocumentFragment();
+                        const words = node.textContent.split(/(\s+)/);
+                        words.forEach(word => {
+                            if (word.trim() !== '') {
+                                const span = document.createElement('span');
+                                span.className = 'reveal-word';
+                                span.textContent = word;
+                                span.setAttribute('data-word', word); // for pseudo-element
+                                fragment.appendChild(span);
+                            } else {
+                                fragment.appendChild(document.createTextNode(word));
+                            }
+                        });
+                        node.parentNode.replaceChild(fragment, node);
+                    } else {
+                        Array.from(node.childNodes).forEach(wrapTextNodes);
+                    }
+                }
+                
+                wrapTextNodes(tempContainer);
+                contentWrapper.appendChild(tempContainer);
+                
+                const wordsToReveal = contentWrapper.querySelectorAll('.reveal-word');
+                if (wordsToReveal.length === 0) {
+                    contentWrapper.innerHTML = finalHtml;
+                    this.isBotTyping = false;
+                    this.setFormState(false);
+                    return;
+                }
 
-                // Adjust animation duration based on text length for better pacing
-                const duration = Math.min(Math.max(numChars * 15, 800), 3000); 
+                let totalDelay = 0;
+                const delayIncrement = 50; // ms
+                const mainAnimDuration = 1000; // ms
+                const clipAnimDuration = 600; // ms
 
-                const animationContainer = document.createElement('div');
-                animationContainer.className = 'animated-text-content';
-                animationContainer.innerHTML = parsedHtml;
-                animationContainer.style.animationDuration = `${duration}ms`;
+                wordsToReveal.forEach(span => {
+                    const before = window.getComputedStyle(span, '::before');
+                    span.style.animation = `wave-reveal ${mainAnimDuration}ms ease-out forwards`;
+                    span.style.animationDelay = `${totalDelay}ms`;
+                    
+                    // This is a trick: we can't directly animate a pseudo-element
+                    // So we create a separate class to trigger its animation
+                    setTimeout(() => {
+                        const pseudoSpan = document.createElement('style');
+                        pseudoSpan.innerHTML = `
+                        .bot-message-content .reveal-word[data-word="${span.dataset.word}"]::before {
+                            animation: wave-clip ${clipAnimDuration}ms ease-out forwards ${totalDelay}ms;
+                        }`;
+                        document.head.appendChild(pseudoSpan);
+                        // Clean up the style tag after animation
+                        setTimeout(() => pseudoSpan.remove(), totalDelay + clipAnimDuration + 50);
 
-                contentWrapper.appendChild(animationContainer);
+                    }, totalDelay);
+
+                    totalDelay += delayIncrement;
+                });
                 
                 if (this.rendererInterval) clearInterval(this.rendererInterval);
                 this.rendererInterval = setInterval(() => {
                     if (!this.isUserScrolledUp) this.scrollToBottom(false);
                 }, 100);
 
+                const totalAnimationTime = totalDelay + mainAnimDuration;
+                
                 setTimeout(() => {
                     clearInterval(this.rendererInterval);
-                    // For robustness and to ensure text is selectable, 
-                    // we replace the animated container with the static final HTML.
-                    contentWrapper.innerHTML = parsedHtml;
+                    contentWrapper.innerHTML = finalHtml;
                     this.isBotTyping = false;
                     this.setFormState(false);
                     this.handleScroll();
-                }, duration);
+                }, totalAnimationTime);
             },
             
             toggleTypingIndicator(show) {
                 if (show) {
                     if (this.typingIndicatorRef) return;
+                    this.setFormState(true);
                     const el = document.createElement('div');
                     el.className = 'message typing-indicator-bubble';
                     el.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
