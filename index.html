@@ -11,7 +11,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Poppins:wght@400;600;700&display=swap');
 
         :root {
-            --accent-cyan: #00B4DB;
+            --accent-cyan: #00B4DB; 
             --accent-purple: #8e2de2;
             --spotlight-color: rgba(142, 45, 226, 0.5);
             --background: #0a0a0a;
@@ -33,7 +33,7 @@
             background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--spotlight-color), transparent 30%);
             z-index: -2; pointer-events: none;
         }
-
+        
         #logo-animation-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
@@ -41,7 +41,7 @@
             transition: opacity 1s ease-out 0.5s;
         }
         #logo-transformer { font-family: 'Orbitron', sans-serif; font-size: clamp(3rem, 15vw, 8rem); }
-
+        
         #beta-banner {
             position: fixed; top: 20px; left: 50%;
             transform: translate(-50%, -150%);
@@ -67,7 +67,7 @@
             position: relative; border-radius: 20px;
             overflow: hidden;
         }
-
+        
         .chat-container {
             width: 100%; height: 100%;
             background: var(--surface-alpha);
@@ -92,9 +92,9 @@
             padding: 20px;
         }
         #side-menu.open { transform: translateX(0); }
-
+        
         .side-menu-header { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
-
+        
         .force-hidden { display: none !important; }
         #user-profile { display: flex; align-items: center; gap: 15px; }
 
@@ -131,7 +131,7 @@
         }
         .header-btn:hover { background-color: rgba(255, 255, 255, 0.1); }
         .header-btn svg { width: 24px; height: 24px; }
-
+        
         .chat-box { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
         .chat-box::-webkit-scrollbar { width: 8px; }
         .chat-box::-webkit-scrollbar-track { background: transparent; }
@@ -149,49 +149,9 @@
         #scroll-down-btn svg { width: 20px; height: 20px; transform: rotate(180deg);}
 
         .message { max-width: 80%; line-height: 1.6; word-wrap: break-word; }
-        .bot-message {
-            align-self: flex-start;
-            color: white;
-            border-radius: 22px;
-            border-bottom-left-radius: 6px;
-            padding: 0;
-            opacity: 0;
-            animation: fadeInMessage 0.3s ease-out forwards;
-        }
-        @keyframes fadeInMessage {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .bot-message-content {
-            padding: 14px 20px;
-            background: var(--surface-alpha); /* Fallback for no animation */
-            border-radius: inherit; /* Inherit border-radius from parent */
-        }
-
-        .bot-message.animated-text .bot-message-content {
-            background: var(--gradient);
-            background-size: 200% 200%;
-            color: transparent;
-            -webkit-background-clip: text;
-            background-clip: text;
-            animation:
-                revealText 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards,
-                animate-gradient 5s ease infinite;
-        }
-
-        @keyframes revealText {
-            0% {
-                filter: blur(8px);
-                background-size: 200% 200%;
-            }
-            100% {
-                color: var(--text-light);
-                filter: blur(0px);
-                background-size: 100% 100%;
-            }
-        }
-
+        .bot-message { align-self: flex-start; background: var(--gradient); color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
+        .bot-message.visible { opacity: 1; }
+        .bot-message-content { padding: 14px 20px; }
         .user-message {
             align-self: flex-end; background: var(--user-msg-bg); color: var(--text-light);
             border-radius: 22px; border-bottom-right-radius: 6px; padding: 14px 20px;
@@ -199,6 +159,30 @@
         }
         @keyframes slideInUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* New styles for the advanced text animation */
+        .bot-message-content .reveal-word {
+            display: inline-block;
+            opacity: 0;
+            filter: blur(4px);
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: reveal 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes reveal {
+            from {
+                opacity: 0;
+                filter: blur(4px);
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                filter: blur(0);
+                transform: translateY(0);
+            }
+        }
+        
         .typing-indicator-bubble {
             align-self: flex-start; background: var(--gradient);
             border-radius: 22px; border-bottom-left-radius: 6px; padding: 14px 20px;
@@ -218,7 +202,7 @@
         #send-btn { background: var(--gradient); border: none; color: white; width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
         #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         #send-btn svg { width: 24px; height: 24px; transform: rotate(-90deg) translateY(1px); }
-
+        
         @media (max-width: 768px) {
             .chat-wrapper, .chat-container { border-radius: 0; }
             #main-content { padding: 0; }
@@ -228,10 +212,9 @@
     </style>
 </head>
 <body>
-    <!-- The rest of the body remains unchanged -->
     <div id="beta-banner">G-AI is in beta. Some features may not work as intended.</div>
 
-    <div id="g_id_onload"
+    <div id="g_id_onload" 
          data-client_id="867344501671-f8i2n6hvtm2321tf5kdfu0oqvmghiih7.apps.googleusercontent.com"
          data-callback="handleCredentialResponse"
          data-auto_select="true">
@@ -247,7 +230,7 @@
                         <p>Login to save & view chat history.</p>
                         <div class="g_id_signin" data-type="standard"></div>
                     </div>
-                    <div id="user-profile" class.bind="userInfo ? '' : 'force-hidden'">
+                    <div id="user-profile" class="force-hidden">
                         <img id="user-pic" src="" alt="User profile picture">
                         <div>
                            <p id="user-name"></p>
@@ -297,8 +280,8 @@
 
         const chatApp = {
             API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
-            MODEL_NAME: "gemini-2.5-flash",
-
+            MODEL_NAME: "gemini-2.5-flash", 
+            
             initialSystemPromptText: "SYSTEM: You are G-AI. Your personality is a mix of a cryptic mentor and a futuristic tech-prophet.",
             userInfo: null,
             currentChatId: null,
@@ -307,20 +290,21 @@
             typingIndicatorRef: null,
             isUserScrolledUp: false,
             isBotTyping: false,
+            rendererInterval: null,
             elements: {},
-
+            
             async init() {
                 this.cacheDOMElements();
                 this.addEventListeners();
                 this.showBetaBanner();
                 await this.loadCorePrompt();
-
+                
                 const storedUser = localStorage.getItem('g-ai-user');
                 if (storedUser) {
                     this.handleLogin(JSON.parse(storedUser));
                 } else {
                     this.showLoginUI();
-                    this.startNewChat(false);
+                    this.startNewChat(false); 
                 }
                 this.runIntroAnimation();
             },
@@ -328,7 +312,7 @@
             showBetaBanner() {
                 const banner = this.elements.betaBanner;
                 if (!banner) return;
-                setTimeout(() => banner.classList.add('visible'), 2000);
+                setTimeout(() => banner.classList.add('visible'), 2000); 
                 setTimeout(() => banner.classList.remove('visible'), 7000);
             },
 
@@ -409,7 +393,7 @@
                 if (!userPayload) { this.handleLogout(); return; }
                 this.userInfo = userPayload;
                 localStorage.setItem('g-ai-user', JSON.stringify(this.userInfo));
-
+                
                 this.elements.userName.textContent = this.userInfo.name;
                 this.elements.userPic.src = this.userInfo.picture;
 
@@ -421,13 +405,13 @@
                 this.userInfo = null;
                 localStorage.removeItem('g-ai-user');
                 if (window.google) google.accounts.id.disableAutoSelect();
-
+                
                 this.showLoginUI();
-                this.elements.chatHistoryList.innerHTML = '';
-                this.startNewChat(true);
+                this.elements.chatHistoryList.innerHTML = ''; 
+                this.startNewChat(true); 
                 this.closeSideMenu();
             },
-
+            
             toggleSideMenu() {
                 this.isMenuOpen = !this.isMenuOpen;
                 this.elements.sideMenu.classList.toggle('open', this.isMenuOpen);
@@ -439,14 +423,14 @@
             },
 
             startNewChat(renderMessage = true) {
-                this.isBotTyping = false;
-
+                if (this.isBotTyping) clearInterval(this.rendererInterval);
+                
                 this.currentChatId = `chat_${Date.now()}`;
                 this.conversationHistory = [
                     { role: "user", parts: [{ text: this.initialSystemPromptText }] },
                     { role: "model", parts: [{ text: "They want you to be a pawn. I program kings.\n\nYour move." }] }
                 ];
-
+                
                 this.elements.chatBox.innerHTML = '';
                 if (renderMessage) {
                     this.addBotMessage(this.conversationHistory[1].parts[0].text, true);
@@ -459,7 +443,7 @@
                     localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(allChats));
                     this.renderChatHistory(allChats);
                 }
-
+                
                 this.updateHistoryUI();
                 this.closeSideMenu();
             },
@@ -467,18 +451,18 @@
             loadChat(chatId) {
                 if (!this.userInfo) return;
                 const chatToLoad = this.getStoredChats().find(c => c.id === chatId);
-
+                
                 if (chatToLoad) {
                     this.currentChatId = chatToLoad.id;
                     this.conversationHistory = chatToLoad.conversationHistory;
                     this.elements.chatBox.innerHTML = '';
-
+                    
                     this.conversationHistory.slice(1).forEach(msg => { // slice(1) to skip system prompt
                         const text = msg.parts[0].text;
                         if (msg.role === 'model') this.addBotMessage(text, true);
                         else if (msg.role === 'user') this.addMessage(text, 'user-message');
                     });
-
+                    
                     this.updateHistoryUI();
                     this.closeSideMenu();
                 }
@@ -494,20 +478,20 @@
 
                 const allChats = this.getStoredChats();
                 const currentChatIndex = allChats.findIndex(c => c.id === this.currentChatId);
-
-                if (currentChatIndex === -1) return;
+                
+                if (currentChatIndex === -1) return; 
 
                 const firstUserMessage = this.conversationHistory.find(m => m.role === 'user' && m.parts[0].text !== this.initialSystemPromptText);
                 const title = firstUserMessage ? firstUserMessage.parts[0].text.substring(0, 35) : 'New Chat';
-
-                const chatData = {
-                    id: this.currentChatId,
-                    title: title + (firstUserMessage && firstUserMessage.parts[0].text.length > 35 ? '...' : ''),
-                    conversationHistory: this.conversationHistory
+                
+                const chatData = { 
+                    id: this.currentChatId, 
+                    title: title + (firstUserMessage && firstUserMessage.parts[0].text.length > 35 ? '...' : ''), 
+                    conversationHistory: this.conversationHistory 
                 };
 
                 allChats[currentChatIndex] = chatData;
-
+                
                 localStorage.setItem(`chatHistory_${this.userInfo.email}`, JSON.stringify(allChats));
                 this.renderChatHistory(allChats);
             },
@@ -539,7 +523,7 @@
                     li.classList.toggle('active', li.dataset.chatId === this.currentChatId);
                 });
             },
-
+            
             async handleFormSubmit(e) {
                 e.preventDefault();
                 const userText = this.elements.userInput.value.trim();
@@ -548,14 +532,14 @@
                     this.updateHistory("user", userText);
                     this.elements.userInput.value = '';
                     this.setFormState(true);
-
-                    this.saveCurrentChat();
+                    
+                    this.saveCurrentChat(); 
                     this.toggleTypingIndicator(true);
-
+                    
                     try {
                         const botText = await this.getBotResponse();
                         this.updateHistory("model", botText);
-                        this.saveCurrentChat();
+                        this.saveCurrentChat(); 
                         this.toggleTypingIndicator(false);
                         this.addBotMessage(botText);
                     } catch (error) {
@@ -563,7 +547,8 @@
                         this.toggleTypingIndicator(false);
                         this.addBotMessage("My apologies, a transmission error occurred. Please try again.", true);
                     } finally {
-                        this.setFormState(false);
+                        // The form state is now set to false inside the addBotMessage function
+                        // to ensure it only enables after the animation is complete.
                     }
                 }
             },
@@ -575,41 +560,88 @@
                 this.elements.chatBox.appendChild(el);
                 this.scrollToBottom(false);
             },
-
+            
+            // --- MODIFIED FUNCTION ---
             addBotMessage(markdownText, instant = false) {
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message bot-message';
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'bot-message-content';
-                contentWrapper.innerHTML = marked.parse(markdownText);
                 messageEl.appendChild(contentWrapper);
                 this.elements.chatBox.appendChild(messageEl);
-
-                if (instant) {
-                    messageEl.classList.add('visible');
-                    // No streaming animation for instant messages
-                } else {
-                    this.isBotTyping = true;
-                    this.setFormState(true);
-                    messageEl.classList.add('animated-text');
-
-                    // The animation is now handled entirely by CSS.
-                    // We just need to know when it finishes to re-enable the form.
-                    contentWrapper.addEventListener('animationend', (e) => {
-                        // Ensure we only listen for the 'revealText' animation
-                        if (e.animationName === 'revealText') {
-                            this.isBotTyping = false;
-                            this.setFormState(false);
-                            this.handleScroll();
-                             // Clean up class to prevent re-animation on scroll
-                            messageEl.classList.remove('animated-text');
-                        }
-                    }, { once: true });
-                }
-
                 this.scrollToBottom(false);
-            },
 
+                // For instant messages or pre-loading chat history
+                if (instant) {
+                    contentWrapper.innerHTML = marked.parse(markdownText);
+                    messageEl.classList.add('visible');
+                    this.setFormState(false);
+                    return;
+                }
+                
+                this.isBotTyping = true;
+                messageEl.classList.add('visible');
+                
+                // 1. Convert markdown to a DOM structure
+                const parsedHtml = marked.parse(markdownText);
+                const tempContainer = document.createElement('div');
+                tempContainer.innerHTML = parsedHtml;
+
+                // 2. Wrap text nodes in spans for animation
+                function wrapTextNodes(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        if (node.textContent.trim() === '') return;
+                        const fragment = document.createDocumentFragment();
+                        // Split by spaces but keep the spaces for layout
+                        const words = node.textContent.split(/(\s+)/);
+                        words.forEach(word => {
+                            if (word.trim() !== '') {
+                                const span = document.createElement('span');
+                                span.className = 'reveal-word';
+                                span.textContent = word;
+                                fragment.appendChild(span);
+                            } else {
+                                fragment.appendChild(document.createTextNode(word));
+                            }
+                        });
+                        node.parentNode.replaceChild(fragment, node);
+                    } else {
+                        // Process children nodes recursively
+                        Array.from(node.childNodes).forEach(wrapTextNodes);
+                    }
+                }
+                
+                wrapTextNodes(tempContainer);
+                contentWrapper.appendChild(tempContainer);
+                
+                // 3. Stagger the animation for each word
+                const wordsToReveal = contentWrapper.querySelectorAll('.reveal-word');
+                let totalDelay = 0;
+                const delayIncrement = 30; // Time in ms between each word reveal
+                
+                wordsToReveal.forEach(span => {
+                    span.style.animationDelay = `${totalDelay}ms`;
+                    totalDelay += delayIncrement;
+                });
+                
+                // 4. Continuously scroll during animation
+                if (this.rendererInterval) clearInterval(this.rendererInterval);
+                this.rendererInterval = setInterval(() => {
+                    if (!this.isUserScrolledUp) this.scrollToBottom(false);
+                }, 100);
+
+                // 5. Cleanup after the entire animation is complete
+                const animationDuration = 600; // Must match the CSS animation duration
+                const totalAnimationTime = totalDelay + animationDuration;
+                
+                setTimeout(() => {
+                    clearInterval(this.rendererInterval);
+                    this.isBotTyping = false;
+                    this.setFormState(false);
+                    this.handleScroll(); // Final check for scroll button visibility
+                }, totalAnimationTime);
+            },
+            
             toggleTypingIndicator(show) {
                 if (show) {
                     if (this.typingIndicatorRef) return;
@@ -631,7 +663,7 @@
                 this.elements.sendBtn.disabled = disabled;
                 if (!disabled) this.elements.userInput.focus();
             },
-
+            
             updateHistory(role, text) { this.conversationHistory.push({ role, parts: [{ text }] }); },
 
             get API_URL() { return `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${this.API_KEY}`; },
@@ -652,7 +684,7 @@
                 }
                 return data.candidates[0].content.parts[0].text;
             },
-
+            
             handleScroll() {
                 const el = this.elements.chatBox;
                 const atBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + 30;
@@ -664,7 +696,7 @@
                 this.elements.chatBox.scrollTo({ top: this.elements.chatBox.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
             },
         };
-
+        
         window.handleCredentialResponse = (response) => {
             const userPayload = decodeJwtResponse(response.credential);
             chatApp.handleLogin(userPayload);
