@@ -149,13 +149,9 @@
         #scroll-down-btn svg { width: 20px; height: 20px; transform: rotate(180deg);}
 
         .message { max-width: 80%; line-height: 1.6; word-wrap: break-word; }
-        .bot-message { align-self: flex-start; background-color: #333; /* Temp bg for structure */ color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
+        .bot-message { align-self: flex-start; background: var(--gradient); color: white; border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
         .bot-message.visible { opacity: 1; }
-        .bot-message-content {
-            padding: 14px 20px;
-            color: white; /* Final text color */
-            position: relative;
-        }
+        .bot-message-content { padding: 14px 20px; color: white; /* Final text color */ }
         .user-message {
             align-self: flex-end; background: var(--user-msg-bg); color: var(--text-light);
             border-radius: 22px; border-bottom-right-radius: 6px; padding: 14px 20px;
@@ -163,34 +159,30 @@
         }
         @keyframes slideInUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- New animation system --- */
-        .bot-message-content.is-animating > * {
-            color: white; /* Base text is white */
-            clip-path: inset(0 100% 0 0); /* Start fully clipped */
-            animation: text-reveal var(--animation-duration, 1s) ease-out forwards;
+        /* --- New animation styles --- */
+        @keyframes wave-fade {
+            from { background-position: -100% 0, 0 0; }
+            to   { background-position: 100% 0, 0 0; }
         }
 
-        .bot-message-content.is-animating::before {
-            content: '';
-            position: absolute;
-            inset: 0; /* Cover the entire content area */
-            border-radius: inherit; /* Match parent's rounding */
-            background: var(--gradient);
-            mix-blend-mode: screen; /* Blends gradient with white text underneath */
-            animation: gradient-fade var(--animation-duration, 1s) ease-out forwards;
-        }
+        .animated-text-content {
+            background-image: 
+                linear-gradient(90deg, var(--accent-purple), var(--accent-cyan)), /* Top layer: The moving gradient */
+                linear-gradient(90deg, white, white); /* Bottom layer: The static final color */
+            
+            background-size: 50% 100%, 100% 100%;
+            background-repeat: no-repeat;
+            
+            -webkit-background-clip: text;
+            background-clip: text;
+            
+            -webkit-text-fill-color: transparent;
 
-        @keyframes text-reveal {
-            to { clip-path: inset(0 0 0 0); }
+            animation-name: wave-fade;
+            animation-timing-function: linear;
+            animation-fill-mode: forwards;
         }
-
-        @keyframes gradient-fade {
-            0% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-        /* --- End new animation system --- */
-
+        
         .typing-indicator-bubble {
             align-self: flex-start; background: var(--gradient);
             border-radius: 22px; border-bottom-left-radius: 6px; padding: 14px 20px;
@@ -566,24 +558,20 @@
                 this.scrollToBottom(false);
             },
             
-            // --- RE-ENGINEERED FUNCTION ---
+            // --- MODIFIED FUNCTION ---
             addBotMessage(markdownText, instant = false) {
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message bot-message';
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'bot-message-content';
-                
-                // The container for the parsed markdown
-                const textContainer = document.createElement('div');
-                textContainer.innerHTML = marked.parse(markdownText);
-                contentWrapper.appendChild(textContainer);
-
                 messageEl.appendChild(contentWrapper);
                 this.elements.chatBox.appendChild(messageEl);
                 this.scrollToBottom(false);
-                
-                // For pre-loaded chats, show instantly without animation.
+
+                const parsedHtml = marked.parse(markdownText);
+
                 if (instant) {
+                    contentWrapper.innerHTML = parsedHtml;
                     messageEl.classList.add('visible');
                     this.setFormState(false);
                     return;
@@ -593,33 +581,33 @@
                 this.setFormState(true);
                 messageEl.classList.add('visible');
 
-                // Calculate a dynamic duration based on text length for a natural feel.
-                // Min 800ms, max 4000ms. Rate of 20ms per character.
-                const textLength = markdownText.length;
-                const duration = Math.min(4000, Math.max(800, textLength * 20));
+                const textContentForEst = document.createElement('div');
+                textContentForEst.innerHTML = parsedHtml;
+                const numChars = textContentForEst.textContent.length;
 
-                // Apply the duration to the animation via a CSS custom property.
-                contentWrapper.style.setProperty('--animation-duration', `${duration}ms`);
+                // Adjust animation duration based on text length for better pacing
+                const duration = Math.min(Math.max(numChars * 15, 800), 3000); 
+
+                const animationContainer = document.createElement('div');
+                animationContainer.className = 'animated-text-content';
+                animationContainer.innerHTML = parsedHtml;
+                animationContainer.style.animationDuration = `${duration}ms`;
+
+                contentWrapper.appendChild(animationContainer);
                 
-                // Add the class that triggers the CSS animations.
-                contentWrapper.classList.add('is-animating');
-
-                // Continuously scroll during the animation if the user hasn't scrolled up.
                 if (this.rendererInterval) clearInterval(this.rendererInterval);
                 this.rendererInterval = setInterval(() => {
                     if (!this.isUserScrolledUp) this.scrollToBottom(false);
                 }, 100);
 
-                // After the animation completes, clean up the classes and state.
                 setTimeout(() => {
                     clearInterval(this.rendererInterval);
-                    contentWrapper.classList.remove('is-animating');
-                    // Remove the inline style property to keep the DOM clean.
-                    contentWrapper.style.removeProperty('--animation-duration');
-                    
+                    // For robustness and to ensure text is selectable, 
+                    // we replace the animated container with the static final HTML.
+                    contentWrapper.innerHTML = parsedHtml;
                     this.isBotTyping = false;
                     this.setFormState(false);
-                    this.handleScroll(); // Check scroll button visibility
+                    this.handleScroll();
                 }, duration);
             },
             
