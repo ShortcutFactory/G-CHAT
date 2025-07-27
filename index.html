@@ -150,8 +150,18 @@
         #scroll-down-btn svg { width: 20px; height: 20px; transform: rotate(180deg);}
 
         .message { max-width: 80%; line-height: 1.6; word-wrap: break-word; }
-        .bot-message { align-self: flex-start; background: var(--gradient); color: var(--final-text-color); border-radius: 22px; border-bottom-left-radius: 6px; padding: 0; opacity: 0; transition: opacity 0.4s ease-out; }
+        .bot-message { 
+            align-self: flex-start; 
+            background: var(--user-msg-bg);
+            color: var(--final-text-color); 
+            border-radius: 22px; 
+            border-bottom-left-radius: 6px; 
+            padding: 0; 
+            opacity: 0; 
+            transition: opacity 0.4s ease-out; 
+        }
         .bot-message.visible { opacity: 1; }
+        
         .bot-message-content { padding: 14px 20px; color: var(--final-text-color); }
         .user-message {
             align-self: flex-end; background: var(--user-msg-bg); color: var(--text-light);
@@ -160,73 +170,81 @@
         }
         @keyframes slideInUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- NEW ANIMATION STYLES --- */
-        .bot-message-content .reveal-word {
-            display: inline-block;
-            /* The text is initially transparent, so we see the gradient background */
-            color: transparent;
-            
-            /* The gradient is much wider than the word. It's white, then the color wave, then white again. */
-            background: linear-gradient(90deg, 
-                var(--final-text-color) 0%, 
-                var(--final-text-color) 40%, 
-                var(--accent-purple) 50%, 
-                var(--accent-cyan) 60%, 
-                var(--final-text-color) 70%,
-                var(--final-text-color) 100%
-            );
-            background-size: 300% 100%;
-            background-position: 100% 0; /* Start with the gradient off-screen to the right */
-            
-            -webkit-background-clip: text;
-            background-clip: text;
-            
-            opacity: 0;
-            filter: blur(4px);
-            transform: translateY(10px);
-            
-            animation-name: scan-and-settle;
-            animation-duration: 1200ms;
-            animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            animation-fill-mode: forwards;
+        .bot-message-content ul, .bot-message-content ol {
+            margin-top: 0.5em;
+            margin-bottom: 0.75em;
+            padding-left: 25px;
+        }
+        .bot-message-content li {
+            margin-top: 0.25em;
         }
 
-        @keyframes scan-and-settle {
-            0% {
-                opacity: 0;
-                filter: blur(4px);
-                transform: translateY(10px);
-            }
-            25% {
+        .bot-message-content {
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .bot-message-content .swing-word {
+            display: inline-block;
+            color: transparent;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
+            background-size: 220% 100%;
+            background-position: 100% 0;
+            -webkit-background-clip: text;
+            background-clip: text;
+            opacity: 0;
+            filter: blur(4px);
+            transform: translateY(25px) rotate(15deg);
+            animation-name: swing-reveal;
+            animation-duration: 900ms;
+            animation-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation-fill-mode: forwards;
+        }
+        
+        /* --- SUBTLE GRADIENT KEYFRAMES (REVERTED) --- */
+        @keyframes swing-reveal {
+            70% {
                 opacity: 1;
                 filter: blur(0);
-                transform: translateY(0);
-            }
-            25%, 85% {
-                /* Animate the background position to "scan" the gradient across the text */
+                transform: translateY(0) rotate(0);
                 background-position: 0% 0;
             }
             100% {
-                /* The color fades in, covering the gradient background, which is now off-screen */
-                color: var(--final-text-color);
                 opacity: 1;
                 filter: blur(0);
-                transform: translateY(0);
+                transform: translateY(0) rotate(0);
+                color: var(--final-text-color);
+                background-position: 0% 0;
             }
         }
         
-        .typing-indicator-bubble {
-            align-self: flex-start; background: var(--gradient);
-            border-radius: 22px; border-bottom-left-radius: 6px; padding: 14px 20px;
+        /* --- NEW THINKING INDICATOR STYLES --- */
+        .thinking-indicator-bubble {
+            align-self: flex-start; background: var(--user-msg-bg);
+            border-radius: 22px; border-bottom-left-radius: 6px;
+            padding: 14px 20px;
         }
-        .typing-indicator { display: flex; align-items: center; gap: 5px; }
-        @keyframes fade { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-        .typing-indicator span {
-            width: 8px; height: 8px; background-color: currentColor; border-radius: 50%;
-            animation: fade 1.5s infinite ease-in-out;
+        .thinking-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-dark);
+            font-style: italic;
         }
-        .typing-indicator span:nth-child(2) { animation-delay: -1s; }
-        .typing-indicator span:nth-child(3) { animation-delay: -0.5s; }
+        .thinking-indicator .dots { display: flex; gap: 4px; }
+        .thinking-indicator span {
+            width: 7px; height: 7px;
+            background-color: currentColor;
+            border-radius: 50%;
+            animation: thinking-pulse 1.4s infinite ease-in-out;
+        }
+        .thinking-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes thinking-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.5); opacity: 1; }
+        }
 
         .chat-form { display: flex; padding: 15px; border-top: 1px solid var(--border-color); gap: 10px; z-index: 2; flex-shrink: 0; }
         #user-input { flex-grow: 1; border: 1px solid transparent; background: var(--background); padding: 14px 20px; font-size: 1rem; color: var(--text-light); outline: none; border-radius: 30px; transition: border-color 0.3s ease, box-shadow 0.3s ease; }
@@ -234,6 +252,64 @@
         #send-btn { background: var(--gradient); border: none; color: white; width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
         #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         #send-btn svg { width: 24px; height: 24px; transform: rotate(-90deg) translateY(1px); }
+
+        #update-popup-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #update-popup-overlay.visible { opacity: 1; }
+        #update-popup {
+            background: var(--surface-alpha);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%; max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        #update-popup-overlay.visible #update-popup { transform: scale(1); }
+        #update-popup h2 {
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            margin-bottom: 25px;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #update-popup ul {
+            list-style: none; padding-left: 0;
+            margin-bottom: 30px;
+        }
+        #update-popup li {
+            margin-bottom: 15px; padding-left: 25px;
+            position: relative; line-height: 1.5;
+        }
+        #update-popup li::before {
+            content: '✓';
+            position: absolute; left: 0; top: 0;
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+        #close-popup-btn {
+            display: block; width: 100%; padding: 12px;
+            font-size: 1rem; font-weight: 600;
+            color: white;
+            background: var(--gradient);
+            border: none; border-radius: 8px; cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #close-popup-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(142, 45, 226, 0.4);
+        }
         
         @media (max-width: 768px) {
             .chat-wrapper, .chat-container { border-radius: 0; }
@@ -244,6 +320,21 @@
     </style>
 </head>
 <body>
+    <div id="update-popup-overlay" class="force-hidden">
+        <div id="update-popup">
+            <h2>Latest Updates</h2>
+            <ul>
+                <li>Smoother, more fluid animations.</li>
+                <li>Significantly faster text generation.</li>
+                <li>New "thinking" indicator while G-AI is responding.</li>
+                <li>Text field is no longer locked during generation.</li>
+                <li>Reversed gradients for improved readability.</li>
+                <li>Enhanced spacing and layout for lists.</li>
+            </ul>
+            <button id="close-popup-btn">OK</button>
+        </div>
+    </div>
+
     <div id="beta-banner">G-AI is in beta. Some features may not work as intended.</div>
 
     <div id="g_id_onload" 
@@ -312,7 +403,7 @@
 
         const chatApp = {
             API_KEY: "AIzaSyCzHVfVf1mZT-yTsRe3xyKJRc7enBKiMsc",
-            MODEL_NAME: "gemini-2.5-flash", 
+            MODEL_NAME: "gemini-1.5-flash", 
             
             initialSystemPromptText: "SYSTEM: You are G-AI. Your personality is a mix of a cryptic mentor and a futuristic tech-prophet.",
             userInfo: null,
@@ -330,6 +421,10 @@
                 this.addEventListeners();
                 this.showBetaBanner();
                 await this.loadCorePrompt();
+
+                if (!sessionStorage.getItem('updatePopupShown')) {
+                    this.showUpdatePopup();
+                }
                 
                 const storedUser = localStorage.getItem('g-ai-user');
                 if (storedUser) {
@@ -339,6 +434,21 @@
                     this.startNewChat(false); 
                 }
                 this.runIntroAnimation();
+            },
+
+            showUpdatePopup() {
+                this.elements.updatePopupOverlay.classList.remove('force-hidden');
+                setTimeout(() => {
+                    this.elements.updatePopupOverlay.classList.add('visible');
+                }, 10);
+            },
+
+            hideUpdatePopup() {
+                this.elements.updatePopupOverlay.classList.remove('visible');
+                this.elements.updatePopupOverlay.addEventListener('transitionend', () => {
+                    this.elements.updatePopupOverlay.classList.add('force-hidden');
+                    sessionStorage.setItem('updatePopupShown', 'true');
+                }, { once: true });
             },
 
             showBetaBanner() {
@@ -354,7 +464,7 @@
                     if (!response.ok) throw new Error('Network response was not ok.');
                     this.initialSystemPromptText = await response.text();
                 } catch (error) {
-                    console.error('Failed to load prompt.txt. Using default prompt.', error);
+                    console.error('Failed to load prompt.txt. Using default.', error);
                 }
             },
 
@@ -379,6 +489,8 @@
                     chatHistoryContainer: document.getElementById('chat-history-container'),
                     chatHistoryList: document.getElementById('chat-history-list'),
                     betaBanner: document.getElementById('beta-banner'),
+                    updatePopupOverlay: document.getElementById('update-popup-overlay'),
+                    closePopupBtn: document.getElementById('close-popup-btn'),
                 };
             },
 
@@ -402,6 +514,7 @@
                 this.elements.menuBtn.addEventListener('click', this.toggleSideMenu.bind(this));
                 this.elements.newChatBtn.addEventListener('click', () => this.startNewChat(true));
                 this.elements.logoutBtn.addEventListener('click', this.handleLogout.bind(this));
+                this.elements.closePopupBtn.addEventListener('click', this.hideUpdatePopup.bind(this));
                 document.body.addEventListener('click', (e) => {
                     if (this.isMenuOpen && !this.elements.sideMenu.contains(e.target) && !this.elements.menuBtn.contains(e.target)) {
                         this.closeSideMenu();
@@ -455,7 +568,7 @@
             },
 
             startNewChat(renderMessage = true) {
-                if (this.isBotTyping) clearInterval(this.rendererInterval);
+                if (this.isBotTyping && this.rendererInterval) clearInterval(this.rendererInterval);
                 
                 this.currentChatId = `chat_${Date.now()}`;
                 this.conversationHistory = [
@@ -489,7 +602,7 @@
                     this.conversationHistory = chatToLoad.conversationHistory;
                     this.elements.chatBox.innerHTML = '';
                     
-                    this.conversationHistory.slice(1).forEach(msg => { // slice(1) to skip system prompt
+                    this.conversationHistory.slice(1).forEach(msg => {
                         const text = msg.parts[0].text;
                         if (msg.role === 'model') this.addBotMessage(text, true);
                         else if (msg.role === 'user') this.addMessage(text, 'user-message');
@@ -531,9 +644,9 @@
             loadUserChats() {
                 const allChats = this.getStoredChats();
                 if (allChats.length > 0) {
-                    this.loadChat(allChats[0].id); // Load the most recent chat
+                    this.loadChat(allChats[0].id);
                 } else {
-                    this.startNewChat(true); // Start a new chat if none exist
+                    this.startNewChat(true);
                 }
                 this.renderChatHistory(allChats);
             },
@@ -577,6 +690,7 @@
                     } catch (error) {
                         console.error("API Call failed:", error);
                         this.toggleTypingIndicator(false);
+                        this.setFormState(false);
                         this.addBotMessage("My apologies, a transmission error occurred. Please try again.", true);
                     }
                 }
@@ -590,7 +704,6 @@
                 this.scrollToBottom(false);
             },
             
-            // --- REFINED FUNCTION ---
             addBotMessage(markdownText, instant = false) {
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message bot-message';
@@ -613,17 +726,27 @@
                 this.setFormState(true);
                 messageEl.classList.add('visible');
                 
+                const ghostEl = document.createElement('div');
+                ghostEl.style.position = 'absolute';
+                ghostEl.style.visibility = 'hidden';
+                contentWrapper.appendChild(ghostEl);
+
+                const visualEl = document.createElement('div');
+                visualEl.style.position = 'relative';
+                contentWrapper.appendChild(visualEl);
+
                 const tempContainer = document.createElement('div');
                 tempContainer.innerHTML = finalHtml;
 
                 function wrapTextNodes(node) {
-                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        if (node.textContent.trim() === '') return;
                         const fragment = document.createDocumentFragment();
                         const words = node.textContent.split(/(\s+)/);
                         words.forEach(word => {
                             if (word.trim() !== '') {
                                 const span = document.createElement('span');
-                                span.className = 'reveal-word';
+                                span.className = 'swing-word';
                                 span.textContent = word;
                                 fragment.appendChild(span);
                             } else {
@@ -637,35 +760,44 @@
                 }
                 
                 wrapTextNodes(tempContainer);
-                contentWrapper.appendChild(tempContainer);
-                
-                const wordsToReveal = contentWrapper.querySelectorAll('.reveal-word');
-                if (wordsToReveal.length === 0) {
-                    this.isBotTyping = false;
-                    this.setFormState(false);
-                    return;
-                }
+                visualEl.appendChild(tempContainer);
 
-                let totalDelay = 0;
-                const delayIncrement = 50; // Stagger start time for each word
-                const animationDuration = 1200; // Must match CSS animation duration
+                const wordsToAnimate = visualEl.querySelectorAll('.swing-word');
+                const wordsForTiming = markdownText.split(/(\s+)/).filter(w => w.trim() !== '');
+                let cumulativeDelay = 0;
                 
-                wordsToReveal.forEach(span => {
-                    span.style.animationDelay = `${totalDelay}ms`;
-                    totalDelay += delayIncrement;
+                const typingSpeedPerChar = 8;
+                const delayBetweenWords = 15;
+                const animationDuration = 900;
+
+                wordsForTiming.forEach((word, index) => {
+                    const span = wordsToAnimate[index];
+                    if (span) {
+                        span.style.animationDelay = `${cumulativeDelay}ms`;
+                    }
+                    cumulativeDelay += (word.length * typingSpeedPerChar) + delayBetweenWords;
                 });
-                
+
+                let ghostMarkdown = '';
+                let charIndex = 0;
+                const chars = markdownText.split('');
                 if (this.rendererInterval) clearInterval(this.rendererInterval);
                 this.rendererInterval = setInterval(() => {
+                    if(charIndex >= chars.length) {
+                        clearInterval(this.rendererInterval);
+                        return;
+                    }
+                    ghostMarkdown += chars[charIndex];
+                    ghostEl.innerHTML = marked.parse(ghostMarkdown);
+                    charIndex++;
                     if (!this.isUserScrolledUp) this.scrollToBottom(false);
-                }, 100);
+                }, typingSpeedPerChar);
 
-                const totalAnimationTime = totalDelay + animationDuration;
-                
+                // Add a small buffer to prevent the "last word" bug
+                const totalAnimationTime = cumulativeDelay + animationDuration + 100;
                 setTimeout(() => {
                     clearInterval(this.rendererInterval);
-                    // Replace the complex animated spans with the clean, final HTML
-                    contentWrapper.innerHTML = finalHtml;
+                    contentWrapper.innerHTML = finalHtml; 
                     this.isBotTyping = false;
                     this.setFormState(false);
                     this.handleScroll();
@@ -676,8 +808,8 @@
                 if (show) {
                     if (this.typingIndicatorRef) return;
                     const el = document.createElement('div');
-                    el.className = 'message typing-indicator-bubble';
-                    el.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+                    el.className = 'message thinking-indicator-bubble';
+                    el.innerHTML = `<div class="thinking-indicator">G-AI is thinking<div class="dots"><span></span><span></span><span></span></div></div>`;
                     this.typingIndicatorRef = el;
                     this.elements.chatBox.appendChild(el);
                 } else {
@@ -689,9 +821,10 @@
             },
 
             setFormState(disabled) {
-                this.elements.userInput.disabled = disabled;
                 this.elements.sendBtn.disabled = disabled;
-                if (!disabled) this.elements.userInput.focus();
+                if (!disabled) {
+                    this.elements.userInput.focus();
+                }
             },
             
             updateHistory(role, text) { this.conversationHistory.push({ role, parts: [{ text }] }); },
